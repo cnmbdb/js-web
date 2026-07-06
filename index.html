@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>速芯算力 - 绿电算力基础设施服务商</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root{--background:#fff;--foreground:#0f172a;--card:#fff;--muted:#f6f8f7;--muted-foreground:#64746d;--border:#e3e8e5;--primary:#16a34a;--primary-foreground:#fff;--ring:rgba(22,163,74,.22);--radius:8px;--shadow:0 1px 2px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08)}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;background:var(--background);color:var(--foreground);min-width:320px;overflow-x:hidden}.page{min-height:100vh;background:linear-gradient(180deg,#fff 0,#f7fbf8 55%,#fff 100%)}
+    a{color:inherit;text-decoration:none}.topbar{height:76px;padding:0 5.4%;display:flex;align-items:center;gap:28px;background:rgba(255,255,255,.92);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;backdrop-filter:blur(14px)}.brand{width:170px;display:flex;align-items:center;gap:10px;font-weight:800;color:#0f172a}.brand-mark{width:34px;height:34px;border-radius:8px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:0 8px 18px rgba(22,163,74,.18)}.brand-text{font-size:21px;line-height:1;white-space:nowrap}.main-nav{flex:1;display:flex;justify-content:center;gap:30px;font-size:15px;font-weight:700;color:#33413a}.main-nav a{height:76px;display:flex;align-items:center;position:relative;white-space:nowrap}.main-nav a.active{color:var(--primary)}.main-nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary);border-radius:999px}.nav-actions{display:flex;gap:12px;align-items:center;font-size:14px;font-weight:700}.ghost-action,.solid-action{height:40px;padding:0 16px;border-radius:var(--radius);display:inline-flex;align-items:center;gap:8px;white-space:nowrap;transition:.18s}.ghost-action{border:1px solid var(--border);background:#fff}.ghost-action:hover{background:var(--muted)}.solid-action{background:var(--primary);color:var(--primary-foreground);box-shadow:0 8px 18px rgba(22,163,74,.18)}.solid-action:hover{background:#15803d}.menu-button{display:none}
+    .hero{min-height:520px;display:grid;grid-template-columns:minmax(420px,.95fr) minmax(480px,1fr);align-items:center;gap:56px;padding:56px 9% 58px;position:relative;overflow:hidden;border-bottom:1px solid var(--border);background:radial-gradient(circle at 78% 30%,rgba(22,163,74,.16),transparent 28%),linear-gradient(135deg,#f8fcf9,#eef8f1)}.hero-copy,.hero-art{position:relative;z-index:1}.hero h1{margin:0 0 18px;font-size:46px;line-height:1.08;letter-spacing:0;font-weight:800;color:#0b1d14}.hero p{margin:0 0 34px;font-size:22px;line-height:1.5;font-weight:700;color:#345247}.hero-actions{display:flex;gap:14px;flex-wrap:wrap}.hero-actions a{height:44px;min-width:156px;padding:0 18px;border-radius:var(--radius);display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;transition:.18s}.hero-actions a:first-child{background:var(--primary);color:#fff;box-shadow:0 8px 18px rgba(22,163,74,.18)}.hero-actions a:last-child{border:1px solid var(--border);background:#fff;color:#0f172a}.hero-actions a:hover{transform:translateY(-1px)}.hero-art{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow)}.hero-art img{width:100%;border-radius:calc(var(--radius) - 2px);display:block}
+    .home-main{max-width:1380px;margin:0 auto;padding:34px 24px 70px}.feature-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}.feature-tab{min-height:132px;padding:24px;border-radius:var(--radius);background:#fff;border:1px solid var(--border);display:flex;align-items:center;gap:18px;color:#0f172a;box-shadow:var(--shadow);transition:.18s}.feature-tab:hover{transform:translateY(-2px);border-color:rgba(22,163,74,.45)}.feature-tab.active{background:#f0fdf4;border-color:rgba(22,163,74,.42)}.feature-tab i{font-size:34px;color:var(--primary)}.feature-tab strong{display:block;font-size:20px;line-height:1.2}.feature-tab span{display:block;margin-top:6px;color:var(--muted-foreground);font-size:12px;text-transform:uppercase;letter-spacing:.02em}
+    .grid-row{display:grid;grid-template-columns:1fr 1.5fr 1.5fr;gap:18px}.home-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);min-height:260px;padding:24px;box-shadow:var(--shadow)}.panel-title{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-size:21px;font-weight:800}.panel-title:before{content:"";width:4px;height:22px;background:var(--primary);border-radius:999px;display:inline-block}.entrances{display:flex;align-items:center;justify-content:space-around;height:170px;text-align:center}.entrances i{font-size:30px;color:var(--primary);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:inline-block;background:#f8fbf9}.entrances span{display:block;margin-top:12px;color:var(--muted-foreground);font-size:14px;font-weight:700}.media-card img,.news-card img{width:100%;height:168px;object-fit:cover;border-radius:calc(var(--radius) - 2px);display:block;border:1px solid var(--border)}
+    .site-footer{border-top:1px solid var(--border);background:#fff;margin-top:20px;padding:28px 24px 34px}.footer-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}.footer-actions a{height:40px;min-width:150px;border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;font-size:14px;font-weight:700}.footer-actions a:hover{background:var(--muted);color:var(--primary)}.footer-meta{margin-top:18px;display:flex;justify-content:center;gap:18px;flex-wrap:wrap;color:var(--muted-foreground);font-size:13px}.watermark{display:none}
+    @media (max-width:1280px){.main-nav,.nav-actions{display:none}.menu-button{display:block;margin-left:auto;border:0;background:var(--primary);color:#fff;border-radius:var(--radius);width:42px;height:38px;font-size:22px}.topbar.open{display:grid;grid-template-columns:1fr auto;height:auto;align-items:start;padding:16px 28px}.topbar.open .main-nav,.topbar.open .nav-actions{grid-column:1/3;display:flex;flex-direction:column;align-items:flex-start;gap:8px}.topbar.open .main-nav a{height:auto;padding:8px 0}.topbar.open .main-nav a.active:after{display:none}.hero{grid-template-columns:1fr}.feature-tabs,.grid-row{grid-template-columns:1fr 1fr}}@media (max-width:760px){.topbar{height:auto;min-height:76px;padding:16px 20px}.brand{width:140px}.hero{padding:40px 22px;min-height:auto}.hero h1{font-size:34px}.hero p{font-size:18px;margin-bottom:26px}.hero-actions a{min-width:0;width:100%;height:42px}.feature-tabs,.grid-row{grid-template-columns:1fr}.feature-tab{height:auto}.entrances{height:auto;gap:12px;flex-wrap:wrap}}
+  </style>
+</head>
+<body data-page="home">
+  <div class="page">
+    <div id="site-nav"></div>
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <h1>绿电算力基础设施服务商</h1>
+          <p>GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海</p>
+          <div class="hero-actions">
+            <a href="consult.html">算力方案咨询</a>
+            <a href="cooperation.html">机房实地考察预约</a>
+          </div>
+        </div>
+        <div class="hero-art">
+          <img src="assets/hero-chip.png" alt="绿色算力芯片主视觉">
+        </div>
+      </section>
+      <section class="home-main">
+        <div class="feature-tabs">
+          <a class="feature-tab active" href="business.html"><i class="ri-focus-3-line"></i><span><strong>核心优势</strong>HIGHLIGHT CAPABILITY</span></a>
+          <a class="feature-tab" href="consult.html"><i class="ri-file-list-3-line"></i><span><strong>应用场景</strong>PRODUCT OUTCOME</span></a>
+          <a class="feature-tab" href="cases.html"><i class="ri-box-3-line"></i><span><strong>标杆案例</strong>OPPORTUNITY ANALYSIS</span></a>
+          <a class="feature-tab" href="cooperation.html"><i class="ri-stack-line"></i><span><strong>招商专区</strong>COOPERATION</span></a>
+        </div>
+        <div class="grid-row">
+          <article class="home-panel">
+            <h2 class="panel-title">四大业务入口</h2>
+            <div class="entrances">
+              <a href="cooperation.html"><i class="ri-building-4-line"></i><span>招商联盟</span></a>
+              <a href="cases.html"><i class="ri-stackshare-line"></i><span>招商物资</span></a>
+              <a href="business.html"><i class="ri-shield-check-line"></i><span>高质纳客</span></a>
+            </div>
+          </article>
+          <article class="home-panel media-card">
+            <h2 class="panel-title">应商场景</h2>
+            <img src="assets/dashboard-panel.png" alt="算力数据面板">
+          </article>
+          <article class="home-panel news-card">
+            <h2 class="panel-title">资讯动态</h2>
+            <img src="assets/server-room.png" alt="绿色智算机房">
+          </article>
+        </div>
+      </section>
+    </main>
+    <div id="site-footer"></div>
+    <div class="watermark">豆包AI生成</div>
+  </div>
+  <script>
+    async function include(id,file){const el=document.getElementById(id);el.innerHTML=await (await fetch(file + "?v=shadcn-white-2")).text();}
+    Promise.all([include("site-nav","nav.html"),include("site-footer","footer.html")]).then(()=>{const page=document.body.dataset.page;document.querySelectorAll(`[data-page="${page}"]`).forEach(a=>a.classList.add("active"));document.querySelector(".menu-button")?.addEventListener("click",()=>document.querySelector(".topbar").classList.toggle("open"));});
+  </script>
+</body>
+</html>

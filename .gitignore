@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+
+# Local visual QA captures
+homepage-render*.png
+mobile-homepage.png
+render-*.png
+shadcn-home*.png
+
+# Source references used during implementation
+reference_contact_sheet.jpg
+参考素材/

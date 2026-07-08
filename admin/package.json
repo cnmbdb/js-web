@@ -6,6 +6,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
+    "build:pages": "vite build -c vite.static.config.ts && node scripts/normalize-pages-build.mjs",
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",

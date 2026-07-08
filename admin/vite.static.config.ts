@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import viteReact from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/admin/',
+  base: './',
   resolve: { tsconfigPaths: true },
   plugins: [tailwindcss(), viteReact()],
   build: {

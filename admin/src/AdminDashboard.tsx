@@ -14,7 +14,6 @@ import {
   Bell,
   BookOpen,
   BriefcaseBusiness,
-  Building2,
   ChevronDown,
   CircleUserRound,
   ClipboardList,
@@ -37,7 +36,6 @@ import {
   SquarePen,
   TerminalSquare,
   Ticket,
-  WalletCards,
   Wrench,
   UsersRound,
 } from 'lucide-react'
@@ -276,6 +274,7 @@ function getStatusClass(status: Lead['status'] | string) {
 
 export function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'updatedAt', desc: false },
@@ -342,10 +341,20 @@ export function AdminDashboard() {
     getSortedRowModel: getSortedRowModel(),
   })
 
+  const selectSection = (section: AdminSection) => {
+    setActiveSection(section)
+    setIsMobileMenuOpen(false)
+  }
+
   return (
     <main className="admin-shell">
       <header className="global-topbar">
-        <button className="top-icon" aria-label="切换侧边栏">
+        <button
+          aria-expanded={isMobileMenuOpen}
+          aria-label="打开后台菜单"
+          className="top-icon"
+          onClick={() => setIsMobileMenuOpen((open) => !open)}
+        >
           <GalleryVerticalEnd size={17} />
         </button>
         <nav className="global-nav" aria-label="主导航">
@@ -353,7 +362,7 @@ export function AdminDashboard() {
             <button
               className={activeSection === item.section ? 'active' : ''}
               key={item.label}
-              onClick={() => setActiveSection(item.section)}
+              onClick={() => selectSection(item.section)}
             >
               {item.label}
             </button>
@@ -375,19 +384,27 @@ export function AdminDashboard() {
         </div>
       </header>
 
+      {isMobileMenuOpen ? (
+        <MobileMenu
+          activeSection={activeSection}
+          onClose={() => setIsMobileMenuOpen(false)}
+          onSelect={selectSection}
+        />
+      ) : null}
+
       <aside className="sidebar" aria-label="后台导航">
         <p className="nav-group">内容运营</p>
         <SidebarNav
           activeSection={activeSection}
           items={primaryNav}
-          onSelect={setActiveSection}
+          onSelect={selectSection}
         />
 
         <p className="nav-group">运营工具</p>
         <SidebarNav
           activeSection={activeSection}
           items={operationNav}
-          onSelect={setActiveSection}
+          onSelect={selectSection}
         />
 
         <p className="nav-group">账户</p>
@@ -417,7 +434,7 @@ export function AdminDashboard() {
       <section className="workspace">
         {activeSection === 'overview' ? (
           <OverviewPage
-            onSelect={setActiveSection}
+            onSelect={selectSection}
             table={table}
             leadView={leadView}
             setLeadView={setLeadView}
@@ -426,7 +443,7 @@ export function AdminDashboard() {
           <ModulePage
             activeSection={activeSection}
             config={modules[activeSection]}
-            onSelect={setActiveSection}
+            onSelect={selectSection}
             table={table}
             leadView={leadView}
             setLeadView={setLeadView}
@@ -434,6 +451,48 @@ export function AdminDashboard() {
         )}
       </section>
     </main>
+  )
+}
+
+function MobileMenu({
+  activeSection,
+  onClose,
+  onSelect,
+}: {
+  activeSection: AdminSection
+  onClose: () => void
+  onSelect: (section: AdminSection) => void
+}) {
+  return (
+    <div className="mobile-menu-backdrop">
+      <button aria-label="关闭菜单" className="mobile-menu-scrim" onClick={onClose} />
+      <section className="mobile-menu-panel" aria-label="手机后台菜单">
+        <div className="mobile-menu-heading">
+          <span>苏信智造后台</span>
+          <strong>{getSectionLabel(activeSection)}</strong>
+        </div>
+
+        <p className="nav-group">内容运营</p>
+        <SidebarNav activeSection={activeSection} items={primaryNav} onSelect={onSelect} />
+
+        <p className="nav-group">运营工具</p>
+        <SidebarNav activeSection={activeSection} items={operationNav} onSelect={onSelect} />
+
+        <p className="nav-group">快捷入口</p>
+        <div className="mobile-shortcuts">
+          {[
+            { label: '首页', section: 'home' },
+            { label: '案例', section: 'cases' },
+            { label: '咨询', section: 'consult' },
+            { label: '合作', section: 'cooperation' },
+          ].map((item) => (
+            <button key={item.label} onClick={() => onSelect(item.section as AdminSection)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -820,4 +879,12 @@ function getFrontendFile(section: AdminSection) {
   }
 
   return files[section]
+}
+
+function getSectionLabel(section: AdminSection) {
+  if (section === 'overview') {
+    return '概览'
+  }
+
+  return modules[section].title
 }

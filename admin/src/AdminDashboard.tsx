@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   type ColumnDef,
   type SortingState,
@@ -9,15 +9,12 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import {
-  Activity,
   BarChart3,
   Bell,
   BookOpen,
   BriefcaseBusiness,
   ChevronDown,
-  CircleUserRound,
   ClipboardList,
-  CreditCard,
   Database,
   Eye,
   FileText,
@@ -25,30 +22,29 @@ import {
   Handshake,
   Home,
   Image,
-  KeyRound,
   LayoutDashboard,
   MessageSquareText,
   Palette,
-  Play,
-  Radio,
   Search,
   Settings,
   SquarePen,
-  TerminalSquare,
-  Ticket,
-  Wrench,
   UsersRound,
 } from 'lucide-react'
 
 type AdminSection =
   | 'overview'
-  | 'home'
-  | 'business'
-  | 'cases'
-  | 'consult'
-  | 'cooperation'
-  | 'assets'
-  | 'settings'
+  | 'navigation'
+  | 'branding'
+  | 'blocks'
+  | 'footer'
+  | 'pageHome'
+  | 'pageAbout'
+  | 'pageBusiness'
+  | 'pageConsult'
+  | 'pageCases'
+  | 'pageNews'
+  | 'pageCooperation'
+  | 'pageGallery'
 
 type Lead = {
   id: string
@@ -69,28 +65,74 @@ type ModuleConfig = {
   items: Array<{ title: string; meta: string; state: string }>
 }
 
+type EditableSection = Exclude<AdminSection, 'overview'>
+
+type NavigationMenuItem = {
+  id: string
+  label: string
+  href: string
+  page: string
+  visible: boolean
+}
+
+type FieldValue = string | boolean | Array<NavigationMenuItem>
+
+type EditableField = {
+  id: string
+  label: string
+  type: 'text' | 'textarea' | 'select' | 'toggle' | 'menu-list'
+  defaultValue: FieldValue
+  hint?: string
+  options?: Array<{ label: string; value: string }>
+}
+
+type AdminFormState = Record<EditableSection, Record<string, FieldValue>>
+
+const SITE_CONFIG_KEY = 'suxin-site-config'
+
+const pageTargetOptions = [
+  { label: '首页', value: 'index.html', page: 'home' },
+  { label: '关于速芯', value: 'about.html', page: 'about' },
+  { label: '核心业务', value: 'business.html', page: 'business' },
+  { label: '应用场景', value: 'consult.html', page: 'consult' },
+  { label: '项目案例', value: 'cases.html', page: 'cases' },
+  { label: '资讯中心', value: 'news.html', page: 'news' },
+  { label: '招商合作', value: 'cooperation.html', page: 'cooperation' },
+  { label: '实景图库', value: 'gallery.html', page: 'gallery' },
+]
+
+const defaultNavigationItems: Array<NavigationMenuItem> = pageTargetOptions.map((item) => ({
+  id: item.page,
+  label: item.label,
+  href: item.value,
+  page: item.page,
+  visible: true,
+}))
+
 const topNav: Array<{ label: string; section: AdminSection }> = [
   { label: '控制台', section: 'overview' },
-  { label: '首页', section: 'home' },
-  { label: '业务', section: 'business' },
-  { label: '案例', section: 'cases' },
-  { label: '咨询', section: 'consult' },
-  { label: '合作', section: 'cooperation' },
+  { label: '导航设置', section: 'navigation' },
+  { label: '页面设置', section: 'pageHome' },
+  { label: '页脚配置', section: 'footer' },
 ]
 
 const primaryNav = [
-  { label: '概览', icon: LayoutDashboard, section: 'overview' },
-  { label: '首页管理', icon: Home, section: 'home' },
-  { label: '业务服务', icon: BriefcaseBusiness, section: 'business' },
-  { label: '案例中心', icon: BookOpen, section: 'cases' },
-  { label: '咨询线索', icon: MessageSquareText, section: 'consult' },
+  { label: '控制台概览', icon: LayoutDashboard, section: 'overview' },
+  { label: '导航设置', icon: GalleryVerticalEnd, section: 'navigation' },
+  { label: 'Logo / 标题 Logo', icon: Image, section: 'branding' },
+  { label: '配置区块', icon: Settings, section: 'blocks' },
+  { label: '页脚配置区块', icon: FileText, section: 'footer' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
 
-const operationNav = [
-  { label: '合作申请', icon: Handshake, section: 'cooperation' },
-  { label: '媒体资产', icon: Image, section: 'assets' },
-  { label: '前台预览', icon: Eye, section: 'overview' },
-  { label: '系统设置', icon: Settings, section: 'settings' },
+const pageNav = [
+  { label: '首页', icon: Home, section: 'pageHome' },
+  { label: '关于速芯', icon: UsersRound, section: 'pageAbout' },
+  { label: '核心业务', icon: BriefcaseBusiness, section: 'pageBusiness' },
+  { label: '应用场景', icon: MessageSquareText, section: 'pageConsult' },
+  { label: '项目案例', icon: BookOpen, section: 'pageCases' },
+  { label: '资讯中心', icon: SquarePen, section: 'pageNews' },
+  { label: '招商合作', icon: Handshake, section: 'pageCooperation' },
+  { label: '实景图库', icon: Image, section: 'pageGallery' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
 
 const leads: Array<Lead> = [
@@ -147,14 +189,74 @@ const leads: Array<Lead> = [
 ]
 
 const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
-  home: {
-    id: 'home',
-    title: '首页管理',
-    description: '维护官网首页首屏、轮播、核心能力和页脚入口。',
+  navigation: {
+    id: 'navigation',
+    title: '导航设置',
+    description: '配置顶部导航、按钮、移动端菜单和页面排序。',
+    stats: [
+      { label: '导航项', value: '8', note: '覆盖主站全部页面' },
+      { label: '移动端菜单', value: '已适配', note: '抽屉式后台导航' },
+      { label: '入口状态', value: '正常', note: '对应 GitHub Pages /admin/' },
+    ],
+    items: [
+      { title: '顶部主导航', meta: '首页、关于速芯、核心业务、项目案例', state: '已发布' },
+      { title: '移动端菜单', meta: '折叠抽屉与快捷入口', state: '已发布' },
+      { title: 'CTA 按钮', meta: '招商合作 / 联系咨询入口', state: '待复核' },
+    ],
+  },
+  branding: {
+    id: 'branding',
+    title: 'Logo / 标题 Logo',
+    description: '维护导航 Logo、标题 Logo、品牌字标和站点识别。',
+    stats: [
+      { label: '品牌资源', value: '4', note: 'Logo、字标、favicon、标题图' },
+      { label: '使用页面', value: '9', note: '主站 + 后台入口' },
+      { label: '素材状态', value: '齐全', note: 'assets/materials 已归档' },
+    ],
+    items: [
+      { title: '导航 Logo', meta: 'logo-nav.png / 顶部导航展示', state: '使用中' },
+      { title: '标题 Logo', meta: 'logo-suxin.png / 页面标题展示', state: '使用中' },
+      { title: '后台品牌标记', meta: '苏信智造后台 / S avatar', state: '待复核' },
+    ],
+  },
+  blocks: {
+    id: 'blocks',
+    title: '配置区块',
+    description: '统一管理首页推荐、业务区块、案例卡片和表单入口。',
+    stats: [
+      { label: '区块数量', value: '18', note: '跨 8 个页面' },
+      { label: '待复核', value: '3', note: '文案、图片、排序' },
+      { label: '复用组件', value: '6', note: 'CTA、图库、案例、资讯' },
+    ],
+    items: [
+      { title: '首页首屏区块', meta: '标题、说明、主按钮、背景视觉', state: '待复核' },
+      { title: '业务能力区块', meta: '核心业务、应用场景、案例推荐', state: '已发布' },
+      { title: '转化入口区块', meta: '招商合作、咨询表单、页脚 CTA', state: '已发布' },
+    ],
+  },
+  footer: {
+    id: 'footer',
+    title: '页脚配置区块',
+    description: '配置页脚栏目、联系方式、版权信息和快捷跳转。',
+    stats: [
+      { label: '页脚栏目', value: '4', note: '品牌、业务、案例、合作' },
+      { label: '联系入口', value: '3', note: '电话、邮箱、表单' },
+      { label: '版权信息', value: '已配置', note: 'partials/footer.html' },
+    ],
+    items: [
+      { title: '底部导航列', meta: '页面链接与栏目排序', state: '已发布' },
+      { title: '企业联系信息', meta: '地址、电话、邮箱、二维码占位', state: '待复核' },
+      { title: '备案与版权', meta: '页脚底栏固定信息', state: '已发布' },
+    ],
+  },
+  pageHome: {
+    id: 'pageHome',
+    title: '首页',
+    description: '维护官网首页首屏、业务亮点、推荐案例和主要转化入口。',
     stats: [
       { label: '首屏模块', value: '4', note: '主视觉、能力、案例、咨询' },
       { label: '待发布', value: '2', note: '文案与图片更新' },
-      { label: '页面状态', value: '正常', note: 'index.html 已连接' },
+      { label: '页面文件', value: 'index.html', note: 'GitHub Pages 首页' },
     ],
     items: [
       { title: '首页主视觉文案', meta: '标题、按钮、背景图', state: '待复核' },
@@ -162,29 +264,59 @@ const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
       { title: '底部联系入口', meta: '咨询与合作跳转', state: '已发布' },
     ],
   },
-  business: {
-    id: 'business',
-    title: '业务服务',
-    description: '管理业务页面的解决方案、服务模块和转化入口。',
+  pageAbout: {
+    id: 'pageAbout',
+    title: '关于速芯',
+    description: '维护企业介绍、发展优势、团队能力和品牌信任内容。',
+    stats: [
+      { label: '内容区块', value: '5', note: '公司介绍、优势、团队、资质' },
+      { label: '品牌素材', value: '6', note: 'Logo 与企业视觉' },
+      { label: '页面文件', value: 'about.html', note: '关于速芯页面' },
+    ],
+    items: [
+      { title: '企业简介', meta: '关于速芯核心说明', state: '已发布' },
+      { title: '能力与资质', meta: '制造经验、技术能力、交付保障', state: '待复核' },
+      { title: '品牌标题区', meta: '标题 Logo 与页面主视觉', state: '使用中' },
+    ],
+  },
+  pageBusiness: {
+    id: 'pageBusiness',
+    title: '核心业务',
+    description: '管理核心业务页面的解决方案、服务模块和转化入口。',
     stats: [
       { label: '服务模块', value: '6', note: '覆盖数字化工厂全链路' },
       { label: '本周调整', value: '3', note: '新增能力说明' },
-      { label: '入口点击', value: '1,284', note: '较上周 +12%' },
+      { label: '页面文件', value: 'business.html', note: '核心业务页面' },
     ],
     items: [
       { title: '智能工厂解决方案', meta: 'business.html', state: '已发布' },
-      { title: '设备联网服务', meta: '图文模块', state: '草稿' },
+      { title: '设备联网服务', meta: '图文模块', state: '待复核' },
       { title: '工业数据看板', meta: '咨询 CTA', state: '待发布' },
     ],
   },
-  cases: {
-    id: 'cases',
-    title: '案例中心',
+  pageConsult: {
+    id: 'pageConsult',
+    title: '应用场景',
+    description: '管理应用场景、客户需求入口和线索跟进状态。',
+    stats: [
+      { label: '场景模块', value: '8', note: '工厂、设备、数据、质量' },
+      { label: '待跟进线索', value: '42', note: '来自 consult.html' },
+      { label: '页面文件', value: 'consult.html', note: '应用场景 / 咨询入口' },
+    ],
+    items: [
+      { title: '数字化车间场景', meta: '产线设备与数据采集', state: '已发布' },
+      { title: '质量追溯场景', meta: '检测、记录、追溯闭环', state: '待复核' },
+      { title: '咨询表单入口', meta: '收集客户需求并进入线索表', state: '待跟进' },
+    ],
+  },
+  pageCases: {
+    id: 'pageCases',
+    title: '项目案例',
     description: '维护案例列表、行业标签、案例图片和首页推荐权重。',
     stats: [
       { label: '已发布案例', value: '36', note: '8 个首页推荐' },
       { label: '素材完整度', value: '92%', note: '6 个案例待补图' },
-      { label: '浏览量', value: '8,426', note: '近 30 天' },
+      { label: '页面文件', value: 'cases.html', note: '项目案例页面' },
     ],
     items: [
       { title: '智能工厂总览页', meta: '首页推荐 · 2,846 浏览', state: '推荐中' },
@@ -192,64 +324,49 @@ const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
       { title: '设备联网解决方案', meta: '能源设备 · 1,930 浏览', state: '已发布' },
     ],
   },
-  consult: {
-    id: 'consult',
-    title: '咨询线索',
-    description: '处理官网咨询表单、意向需求、跟进人和转化状态。',
+  pageNews: {
+    id: 'pageNews',
+    title: '资讯中心',
+    description: '维护新闻动态、行业观察、技术文章和发布状态。',
     stats: [
-      { label: '今日线索', value: '18', note: '+6 较昨日' },
-      { label: '待跟进', value: '42', note: '12 条超 24 小时' },
-      { label: '转化率', value: '21%', note: '近 30 天' },
+      { label: '资讯条目', value: '12', note: '新闻、技术、行业动态' },
+      { label: '草稿', value: '3', note: '等待编辑复核' },
+      { label: '页面文件', value: 'news.html', note: '资讯中心页面' },
     ],
     items: [
-      { title: '华东智能装备有限公司', meta: '数字化车间改造', state: '待跟进' },
-      { title: '宁波精密制造集团', meta: '工业数据看板', state: '方案中' },
-      { title: '南通自动化研究院', meta: '联合解决方案', state: '已转化' },
+      { title: '行业趋势文章', meta: '智能制造与数据化转型', state: '草稿' },
+      { title: '项目交付动态', meta: '近期案例复盘与成果', state: '待发布' },
+      { title: '技术专题', meta: '设备联网、数据看板、质量追溯', state: '已发布' },
     ],
   },
-  cooperation: {
-    id: 'cooperation',
-    title: '合作申请',
+  pageCooperation: {
+    id: 'pageCooperation',
+    title: '招商合作',
     description: '管理合作伙伴申请、渠道信息、联合方案和回访记录。',
     stats: [
       { label: '新增申请', value: '7', note: '本周' },
       { label: '待评估', value: '5', note: '渠道与方案' },
-      { label: '已签约', value: '12', note: '年度合作' },
+      { label: '页面文件', value: 'cooperation.html', note: '招商合作页面' },
     ],
     items: [
       { title: '长三角工业服务商', meta: '区域渠道合作', state: '待评估' },
-      { title: '自动化集成伙伴', meta: '联合交付方案', state: '洽谈中' },
-      { title: '高校研究团队', meta: '产学研合作', state: '已通过' },
+      { title: '自动化集成伙伴', meta: '联合交付方案', state: '方案中' },
+      { title: '高校研究团队', meta: '产学研合作', state: '已转化' },
     ],
   },
-  assets: {
-    id: 'assets',
-    title: '媒体资产',
-    description: '管理官网图片、案例图、参考素材和页面渲染资源。',
+  pageGallery: {
+    id: 'pageGallery',
+    title: '实景图库',
+    description: '管理工厂实景、项目图库、现场素材和页面图片资源。',
     stats: [
-      { label: '图片资产', value: '28', note: 'assets 目录' },
-      { label: '参考素材', value: '16', note: '微信图片素材' },
+      { label: '图库素材', value: '28', note: '现场、设备、案例图' },
       { label: '待压缩', value: '4', note: '建议优化首屏' },
+      { label: '页面文件', value: 'gallery.html', note: '实景图库页面' },
     ],
     items: [
-      { title: 'logo-nav.png', meta: '导航品牌标识', state: '使用中' },
-      { title: 'factory-aerial.png', meta: '首页/业务视觉', state: '使用中' },
-      { title: 'case-*.png', meta: '案例中心图片组', state: '待整理' },
-    ],
-  },
-  settings: {
-    id: 'settings',
-    title: '系统设置',
-    description: '配置 GitHub Pages 发布、站点入口、后台权限和静态构建。',
-    stats: [
-      { label: '发布目标', value: '/admin/', note: 'GitHub Pages 静态入口' },
-      { label: '开发模式', value: 'Start', note: '本机保留 TanStack Start' },
-      { label: '生产模式', value: 'SPA', note: '纯静态构建' },
-    ],
-    items: [
-      { title: 'GitHub Pages 发布', meta: '_site/admin/index.html', state: '已配置' },
-      { title: 'Devtools Shell', meta: '仅开发环境挂载', state: '已启用' },
-      { title: '路由策略', meta: '后台单页模块切换', state: '已配置' },
+      { title: '工厂现场图组', meta: '设备、车间、产线实景', state: '使用中' },
+      { title: '项目案例图库', meta: 'case-*.png 图片组', state: '待整理' },
+      { title: '首页推荐图片', meta: '同步主站首屏与案例区', state: '待复核' },
     ],
   },
 }
@@ -266,20 +383,268 @@ const updates = [
   { title: '处理合作申请 3 条', meta: '合作申请 · 昨天' },
 ]
 
+const publishOptions = [
+  { label: '已发布', value: '已发布' },
+  { label: '待复核', value: '待复核' },
+  { label: '草稿', value: '草稿' },
+]
+
+const layoutOptions = [
+  { label: '标准首屏', value: 'standard' },
+  { label: '紧凑首屏', value: 'compact' },
+  { label: '强调转化', value: 'conversion' },
+]
+
+function pageFields(title: string, subtitle: string): Array<EditableField> {
+  return [
+    {
+      id: 'heroTitle',
+      label: '页面主标题',
+      type: 'text',
+      defaultValue: title,
+      hint: '同步到前台当前页面的 h1 或首页轮播标题',
+    },
+    {
+      id: 'heroSubtitle',
+      label: '页面副标题',
+      type: 'textarea',
+      defaultValue: subtitle,
+      hint: '同步到前台当前页面首屏说明',
+    },
+    {
+      id: 'primaryCtaLabel',
+      label: '主按钮文案',
+      type: 'text',
+      defaultValue: '立即咨询',
+    },
+    {
+      id: 'secondaryCtaLabel',
+      label: '次按钮文案',
+      type: 'text',
+      defaultValue: '查看详情',
+    },
+    {
+      id: 'heroLayout',
+      label: '首屏布局',
+      type: 'select',
+      defaultValue: 'standard',
+      options: layoutOptions,
+    },
+    {
+      id: 'publishState',
+      label: '发布状态',
+      type: 'select',
+      defaultValue: '已发布',
+      options: publishOptions,
+    },
+    {
+      id: 'showOnHome',
+      label: '首页推荐',
+      type: 'toggle',
+      defaultValue: true,
+      hint: '用于首页推荐区和后台统计',
+    },
+  ]
+}
+
+const editableSections: Record<EditableSection, { title: string; fields: Array<EditableField> }> = {
+  navigation: {
+    title: '导航配置',
+    fields: [
+      {
+        id: 'menuItems',
+        label: '顶部导航菜单',
+        type: 'menu-list',
+        defaultValue: defaultNavigationItems,
+        hint: '菜单名称、跳转页面和显示状态都会同步到前台顶部导航',
+      },
+      {
+        id: 'mobileMode',
+        label: '手机菜单',
+        type: 'select',
+        defaultValue: 'drawer',
+        options: [
+          { label: '抽屉菜单', value: 'drawer' },
+          { label: '折叠列表', value: 'stack' },
+        ],
+      },
+      { id: 'ghostActionLabel', label: '次级按钮', type: 'text', defaultValue: '在线咨询' },
+      { id: 'solidActionLabel', label: '主按钮', type: 'text', defaultValue: '预约考察' },
+    ],
+  },
+  branding: {
+    title: '品牌配置',
+    fields: [
+      { id: 'brandName', label: '导航 Logo 文字', type: 'text', defaultValue: '速芯算力' },
+      { id: 'siteTitle', label: '浏览器标题', type: 'text', defaultValue: '速芯算力 - 绿电算力基础设施服务商' },
+      {
+        id: 'logoAsset',
+        label: 'Logo 资源',
+        type: 'select',
+        defaultValue: 'logo-nav.png',
+        options: [
+          { label: '导航 Logo', value: 'logo-nav.png' },
+          { label: '标题 Logo', value: 'logo-suxin.png' },
+          { label: '仅文字', value: 'text-only' },
+        ],
+      },
+      { id: 'showBrandMark', label: '显示图标标记', type: 'toggle', defaultValue: true },
+      { id: 'titleLogoText', label: '标题 Logo 文案', type: 'text', defaultValue: '绿电算力基础设施服务商' },
+    ],
+  },
+  blocks: {
+    title: '区块配置',
+    fields: [
+      { id: 'heroBlockTitle', label: '首页首屏区块名', type: 'text', defaultValue: '首页主视觉' },
+      { id: 'featureBlockTitle', label: '业务区块名', type: 'text', defaultValue: '四大业务入口' },
+      { id: 'caseBlockTitle', label: '案例区块名', type: 'text', defaultValue: '项目案例推荐' },
+      { id: 'leadBlockTitle', label: '线索区块名', type: 'text', defaultValue: '应用场景咨询' },
+      {
+        id: 'density',
+        label: '区块密度',
+        type: 'select',
+        defaultValue: 'balanced',
+        options: [
+          { label: '紧凑', value: 'compact' },
+          { label: '平衡', value: 'balanced' },
+          { label: '宽松', value: 'loose' },
+        ],
+      },
+      { id: 'showStats', label: '显示统计数据', type: 'toggle', defaultValue: true },
+    ],
+  },
+  footer: {
+    title: '页脚配置',
+    fields: [
+      { id: 'companyName', label: '公司/品牌名', type: 'text', defaultValue: '速芯算力' },
+      { id: 'serviceLine', label: '服务说明', type: 'text', defaultValue: 'GPU算力硬件销售' },
+      { id: 'hostingLine', label: '托管说明', type: 'text', defaultValue: '智算机房托管' },
+      { id: 'phone', label: '联系电话', type: 'text', defaultValue: '招商专线' },
+      { id: 'wechat', label: '企业微信', type: 'text', defaultValue: '企业微信' },
+      { id: 'address', label: '地址入口', type: 'text', defaultValue: '机房地址' },
+      { id: 'showMeta', label: '显示页脚信息', type: 'toggle', defaultValue: true },
+    ],
+  },
+  pageHome: {
+    title: '首页配置',
+    fields: pageFields('绿电算力基础设施服务商', 'GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海'),
+  },
+  pageAbout: {
+    title: '关于速芯配置',
+    fields: pageFields('关于速芯', '聚焦绿电算力基础设施，连接硬件、机房、场景与产业合作。'),
+  },
+  pageBusiness: {
+    title: '核心业务配置',
+    fields: pageFields('核心业务', 'GPU算力硬件销售、智算机房托管、企业AIGC降本与跨境算力出海。'),
+  },
+  pageConsult: {
+    title: '应用场景配置',
+    fields: pageFields('应用场景', '面向电商、MCN、广告、工业质检、政务与文旅场景快速匹配算力方案。'),
+  },
+  pageCases: {
+    title: '项目案例配置',
+    fields: pageFields('项目案例', '展示园区、本地企业、跨境业务和智算机房合作案例。'),
+  },
+  pageNews: {
+    title: '资讯中心配置',
+    fields: pageFields('资讯中心', '发布算力基础设施、行业动态、项目交付和技术观察。'),
+  },
+  pageCooperation: {
+    title: '招商合作配置',
+    fields: pageFields('招商合作', '面向渠道伙伴、园区资源、机房合作与联合交付开放合作入口。'),
+  },
+  pageGallery: {
+    title: '实景图库配置',
+    fields: pageFields('实景图库', '集中展示机房、设备、项目现场和合作空间实景素材。'),
+  },
+}
+
+function buildDefaultFormState(): AdminFormState {
+  return Object.fromEntries(
+    Object.entries(editableSections).map(([section, config]) => [
+      section,
+      Object.fromEntries(config.fields.map((field) => [field.id, field.defaultValue])),
+    ]),
+  ) as AdminFormState
+}
+
+function readFormState(): AdminFormState {
+  const fallback = buildDefaultFormState()
+
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  try {
+    const saved = window.localStorage.getItem(SITE_CONFIG_KEY)
+    if (!saved) {
+      return fallback
+    }
+
+    const parsed = JSON.parse(saved) as { sections?: Partial<AdminFormState> }
+    return Object.fromEntries(
+      Object.entries(fallback).map(([section, values]) => [
+        section,
+        {
+          ...values,
+          ...(parsed.sections?.[section as EditableSection] ?? {}),
+        },
+      ]),
+    ) as AdminFormState
+  } catch {
+    return fallback
+  }
+}
+
+function writeFormState(configState: AdminFormState) {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  const updatedAt = new Date().toISOString()
+  window.localStorage.setItem(
+    SITE_CONFIG_KEY,
+    JSON.stringify({
+      version: 1,
+      updatedAt,
+      sections: configState,
+    }),
+  )
+
+  return updatedAt
+}
+
 function getStatusClass(status: Lead['status'] | string) {
   return status === '待跟进' || status === '方案中' || status === '待发布' || status === '待评估'
     ? 'status-primary'
     : 'status-neutral'
 }
 
+function isTopNavActive(section: AdminSection, activeSection: AdminSection) {
+  if (section === 'pageHome') {
+    return activeSection.startsWith('page')
+  }
+
+  return activeSection === section
+}
+
 export function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<AdminSection>('overview')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
+  const [configState, setConfigState] = useState<AdminFormState>(() => readFormState())
+  const [lastSavedAt, setLastSavedAt] = useState('')
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'updatedAt', desc: false },
   ])
   const [leadView, setLeadView] = useState<'全部' | '待跟进' | '方案中'>('全部')
+
+  useEffect(() => {
+    const updatedAt = writeFormState(configState)
+    if (updatedAt) {
+      setLastSavedAt(new Date(updatedAt).toLocaleTimeString('zh-CN', { hour12: false }))
+    }
+  }, [configState])
 
   const columns = useMemo<Array<ColumnDef<Lead>>>(
     () => [
@@ -346,6 +711,16 @@ export function AdminDashboard() {
     setIsMobileMenuOpen(false)
   }
 
+  const updateConfigField = (section: EditableSection, fieldId: string, value: FieldValue) => {
+    setConfigState((current) => ({
+      ...current,
+      [section]: {
+        ...current[section],
+        [fieldId]: value,
+      },
+    }))
+  }
+
   return (
     <main className="admin-shell">
       <header className="global-topbar">
@@ -360,7 +735,7 @@ export function AdminDashboard() {
         <nav className="global-nav" aria-label="主导航">
           {topNav.map((item) => (
             <button
-              className={activeSection === item.section ? 'active' : ''}
+              className={isTopNavActive(item.section, activeSection) ? 'active' : ''}
               key={item.label}
               onClick={() => selectSection(item.section)}
             >
@@ -393,37 +768,19 @@ export function AdminDashboard() {
       ) : null}
 
       <aside className="sidebar" aria-label="后台导航">
-        <p className="nav-group">内容运营</p>
+        <p className="nav-group">控制台</p>
         <SidebarNav
           activeSection={activeSection}
           items={primaryNav}
           onSelect={selectSection}
         />
 
-        <p className="nav-group">运营工具</p>
+        <p className="nav-group">页面设置</p>
         <SidebarNav
           activeSection={activeSection}
-          items={operationNav}
+          items={pageNav}
           onSelect={selectSection}
         />
-
-        <p className="nav-group">账户</p>
-        <nav className="nav-list">
-          {[
-            { label: '工作台成员', icon: UsersRound },
-            { label: '个人资料', icon: CircleUserRound },
-            { label: '发布记录', icon: ClipboardList },
-            { label: '系统维护', icon: Wrench },
-          ].map((item) => {
-            const Icon = item.icon
-            return (
-              <button className="nav-item" key={item.label}>
-                <Icon size={18} aria-hidden="true" />
-                <span>{item.label}</span>
-              </button>
-            )
-          })}
-        </nav>
 
         <div className="sidebar-foot">
           <span>本机开发</span>
@@ -442,8 +799,9 @@ export function AdminDashboard() {
         ) : (
           <ModulePage
             activeSection={activeSection}
-            config={modules[activeSection]}
-            onSelect={selectSection}
+            formValues={configState[activeSection]}
+            lastSavedAt={lastSavedAt}
+            onConfigChange={updateConfigField}
             table={table}
             leadView={leadView}
             setLeadView={setLeadView}
@@ -472,19 +830,19 @@ function MobileMenu({
           <strong>{getSectionLabel(activeSection)}</strong>
         </div>
 
-        <p className="nav-group">内容运营</p>
+        <p className="nav-group">控制台</p>
         <SidebarNav activeSection={activeSection} items={primaryNav} onSelect={onSelect} />
 
-        <p className="nav-group">运营工具</p>
-        <SidebarNav activeSection={activeSection} items={operationNav} onSelect={onSelect} />
+        <p className="nav-group">页面设置</p>
+        <SidebarNav activeSection={activeSection} items={pageNav} onSelect={onSelect} />
 
         <p className="nav-group">快捷入口</p>
         <div className="mobile-shortcuts">
           {[
-            { label: '首页', section: 'home' },
-            { label: '案例', section: 'cases' },
-            { label: '咨询', section: 'consult' },
-            { label: '合作', section: 'cooperation' },
+            { label: '首页', section: 'pageHome' },
+            { label: '关于速芯', section: 'pageAbout' },
+            { label: '核心业务', section: 'pageBusiness' },
+            { label: '项目案例', section: 'pageCases' },
           ].map((item) => (
             <button key={item.label} onClick={() => onSelect(item.section as AdminSection)}>
               {item.label}
@@ -543,26 +901,26 @@ function OverviewPage({
         <div className="deck-copy">
           <span><ClipboardList size={16} /> 开始使用</span>
           <h2>管理官网内容、咨询线索和合作入口</h2>
-          <p>这个后台对应当前 GitHub Pages 官网，覆盖首页、业务、案例、咨询、合作和素材。</p>
+          <p>这个后台对应当前 GitHub Pages 官网，覆盖导航、品牌、页脚和 8 个前台页面。</p>
           <div className="deck-actions">
-            <button className="ghost-button" onClick={() => onSelect('home')}>编辑首页</button>
-            <button className="light-button" onClick={() => onSelect('cases')}>
+            <button className="ghost-button" onClick={() => onSelect('navigation')}>配置导航</button>
+            <button className="light-button" onClick={() => onSelect('pageHome')}>
               <BookOpen size={16} />
-              发布案例
+              编辑首页
             </button>
           </div>
           <div className="setup-list">
             {[
-              ['首页管理', '维护 index.html 首屏、能力模块和 CTA', Home],
-              ['业务服务', '同步 business.html 解决方案内容', BriefcaseBusiness],
-              ['咨询线索', '跟进 consult.html 收集的客户需求', MessageSquareText],
+              ['导航设置', '维护顶部导航、移动菜单和按钮顺序', GalleryVerticalEnd],
+              ['Logo / 标题 Logo', '同步品牌标识、标题图和后台标记', Image],
+              ['页面设置', '管理首页、关于速芯、核心业务等 8 个页面', Home],
             ].map(([title, detail, Icon], index) => {
               const SetupIcon = Icon as typeof Home
               return (
                 <button
                   className="setup-row"
                   key={title as string}
-                  onClick={() => onSelect(['home', 'business', 'consult'][index] as AdminSection)}
+                  onClick={() => onSelect(['navigation', 'branding', 'pageHome'][index] as AdminSection)}
                 >
                   <span className="checkmark">✓</span>
                   <SetupIcon size={18} />
@@ -581,10 +939,10 @@ function OverviewPage({
           <span>推荐操作</span>
           <h2>保持官网就绪</h2>
           {[
-            ['前台预览', '检查首页、业务、案例页面', Eye, 'overview'],
-            ['案例库', '更新首页推荐案例和权重', BookOpen, 'cases'],
-            ['咨询线索', '处理待跟进客户需求', MessageSquareText, 'consult'],
-            ['媒体资产', '整理 assets 与参考素材', Image, 'assets'],
+            ['导航设置', '检查顶部导航和移动端菜单', Eye, 'navigation'],
+            ['配置区块', '整理首页推荐、业务和 CTA 区块', Settings, 'blocks'],
+            ['应用场景', '处理场景内容与咨询线索', MessageSquareText, 'pageConsult'],
+            ['实景图库', '整理现场图片与案例素材', Image, 'pageGallery'],
           ].map(([title, detail, Icon, section]) => {
             const RecIcon = Icon as typeof Eye
             return (
@@ -637,8 +995,8 @@ function OverviewPage({
           <span>GitHub Pages</span>
           <strong>/admin/</strong>
           <p>静态后台入口</p>
-          <button onClick={() => onSelect('settings')}>
-            查看发布配置
+          <button onClick={() => onSelect('footer')}>
+            查看页脚配置
             <span>→</span>
           </button>
         </aside>
@@ -651,91 +1009,248 @@ function OverviewPage({
 
 function ModulePage({
   activeSection,
-  config,
-  onSelect,
+  formValues,
+  lastSavedAt,
+  onConfigChange,
   table,
   leadView,
   setLeadView,
 }: {
-  activeSection: Exclude<AdminSection, 'overview'>
-  config: ModuleConfig
-  onSelect: (section: AdminSection) => void
+  activeSection: EditableSection
+  formValues: Record<string, FieldValue>
+  lastSavedAt: string
+  onConfigChange: (section: EditableSection, fieldId: string, value: FieldValue) => void
   table: ReturnType<typeof useReactTable<Lead>>
   leadView: '全部' | '待跟进' | '方案中'
   setLeadView: (view: '全部' | '待跟进' | '方案中') => void
 }) {
   return (
     <>
-      <section className="module-hero">
-        <div>
-          <span>{config.id}</span>
-          <h1>{config.title}</h1>
-          <p>{config.description}</p>
-        </div>
-        <div className="module-actions">
-          <button className="ghost-button" onClick={() => onSelect('overview')}>返回概览</button>
-          <button className="light-button">
-            <SquarePen size={16} />
-            新建条目
-          </button>
-        </div>
-      </section>
+      <ConfigEditor
+        activeSection={activeSection}
+        formValues={formValues}
+        lastSavedAt={lastSavedAt}
+        onChange={onConfigChange}
+      />
 
-      <section className="module-grid" aria-label={`${config.title} 数据`}>
-        {config.stats.map((stat) => (
-          <article className="metric" key={stat.label}>
-            <span>{stat.label}</span>
-            <strong>{stat.value}</strong>
-            <p>{stat.note}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="module-layout">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <h2>{config.title}条目</h2>
-              <p>保持与前台对应页面内容一致</p>
-            </div>
-            <button className="ghost-button">
-              <TerminalSquare size={16} />
-              预览配置
-            </button>
-          </div>
-          <div className="module-list">
-            {config.items.map((item) => (
-              <div className="module-row" key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.meta}</p>
-                </div>
-                <span className={`status ${getStatusClass(item.state)}`}>{item.state}</span>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <aside className="panel module-inspector">
-          <div className="panel-heading compact">
-            <h2>页面映射</h2>
-            <FileText size={18} aria-hidden="true" />
-          </div>
-          <div className="inspector-list">
-            <div><span>前台文件</span><strong>{getFrontendFile(activeSection)}</strong></div>
-            <div><span>发布入口</span><strong>/admin/</strong></div>
-            <div><span>开发入口</span><strong>localhost:3000</strong></div>
-            <div><span>构建模式</span><strong>Start dev + SPA pages</strong></div>
-          </div>
-        </aside>
-      </section>
-
-      {activeSection === 'consult' ? (
+      {activeSection === 'pageConsult' ? (
         <section className="single-table">
           <LeadTable table={table} leadView={leadView} setLeadView={setLeadView} />
         </section>
       ) : null}
     </>
+  )
+}
+
+function ConfigEditor({
+  activeSection,
+  formValues,
+  lastSavedAt,
+  onChange,
+}: {
+  activeSection: EditableSection
+  formValues: Record<string, FieldValue>
+  lastSavedAt: string
+  onChange: (section: EditableSection, fieldId: string, value: FieldValue) => void
+}) {
+  const editableConfig = editableSections[activeSection]
+
+  return (
+    <section className="config-layout" aria-label={`${editableConfig.title} 表单`}>
+      <article className="panel config-panel">
+        <div className="panel-heading">
+          <div>
+            <h2>{editableConfig.title}</h2>
+            <p>这些字段会写入前台配置，当前浏览器访问前台页面时会直接读取</p>
+          </div>
+          <span className="save-pill">已自动保存 {lastSavedAt || '刚刚'}</span>
+        </div>
+
+        <div className="config-form">
+          {editableConfig.fields.map((field) => (
+            <ConfigField
+              field={field}
+              key={field.id}
+              onChange={(value) => onChange(activeSection, field.id, value)}
+              value={formValues[field.id] ?? field.defaultValue}
+            />
+          ))}
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function ConfigField({
+  field,
+  value,
+  onChange,
+}: {
+  field: EditableField
+  value: FieldValue
+  onChange: (value: FieldValue) => void
+}) {
+  if (field.type === 'menu-list') {
+    return (
+      <NavigationMenuEditor
+        field={field}
+        onChange={onChange}
+        value={Array.isArray(value) ? value : defaultNavigationItems}
+      />
+    )
+  }
+
+  if (field.type === 'textarea') {
+    return (
+      <label className="config-field span-2">
+        <span>{field.label}</span>
+        <textarea
+          onChange={(event) => onChange(event.target.value)}
+          value={String(value)}
+        />
+        {field.hint ? <small>{field.hint}</small> : null}
+      </label>
+    )
+  }
+
+  if (field.type === 'select') {
+    return (
+      <label className="config-field">
+        <span>{field.label}</span>
+        <select onChange={(event) => onChange(event.target.value)} value={String(value)}>
+          {field.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        {field.hint ? <small>{field.hint}</small> : null}
+      </label>
+    )
+  }
+
+  if (field.type === 'toggle') {
+    return (
+      <label className="config-toggle">
+        <input
+          checked={Boolean(value)}
+          onChange={(event) => onChange(event.target.checked)}
+          type="checkbox"
+        />
+        <span>
+          <strong>{field.label}</strong>
+          {field.hint ? <small>{field.hint}</small> : null}
+        </span>
+      </label>
+    )
+  }
+
+  return (
+    <label className="config-field">
+      <span>{field.label}</span>
+      <input
+        onChange={(event) => onChange(event.target.value)}
+        type="text"
+        value={String(value)}
+      />
+      {field.hint ? <small>{field.hint}</small> : null}
+    </label>
+  )
+}
+
+function NavigationMenuEditor({
+  field,
+  value,
+  onChange,
+}: {
+  field: EditableField
+  value: Array<NavigationMenuItem>
+  onChange: (value: Array<NavigationMenuItem>) => void
+}) {
+  const updateItem = (id: string, patch: Partial<NavigationMenuItem>) => {
+    onChange(value.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  }
+
+  const addItem = () => {
+    const nextIndex = value.length + 1
+    onChange([
+      ...value,
+      {
+        id: `custom-${Date.now()}`,
+        label: `新菜单 ${nextIndex}`,
+        href: 'index.html',
+        page: 'home',
+        visible: true,
+      },
+    ])
+  }
+
+  const removeItem = (id: string) => {
+    onChange(value.filter((item) => item.id !== id))
+  }
+
+  return (
+    <div className="menu-editor span-2">
+      <div className="menu-editor-head">
+        <div>
+          <strong>{field.label}</strong>
+          {field.hint ? <small>{field.hint}</small> : null}
+        </div>
+        <button className="ghost-button" onClick={addItem} type="button">
+          新增菜单
+        </button>
+      </div>
+
+      <div className="menu-list-editor">
+        {value.map((item, index) => (
+          <div className="menu-edit-row" key={item.id}>
+            <span className="menu-order">{index + 1}</span>
+            <label className="menu-cell">
+              <span>菜单名称</span>
+              <input
+                onChange={(event) => updateItem(item.id, { label: event.target.value })}
+                value={item.label}
+              />
+            </label>
+            <label className="menu-cell">
+              <span>跳转页面</span>
+              <select
+                onChange={(event) => {
+                  const option = pageTargetOptions.find((target) => target.value === event.target.value)
+                  updateItem(item.id, {
+                    href: event.target.value,
+                    page: option?.page ?? item.page,
+                  })
+                }}
+                value={item.href}
+              >
+                {pageTargetOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label} - {option.value}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="menu-visible">
+              <input
+                checked={item.visible}
+                onChange={(event) => updateItem(item.id, { visible: event.target.checked })}
+                type="checkbox"
+              />
+              <span>显示</span>
+            </label>
+            <button
+              className="danger-button"
+              disabled={value.length <= 1}
+              onClick={() => removeItem(item.id)}
+              type="button"
+            >
+              删除
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -759,7 +1274,7 @@ function DashboardBottom({
             <BarChart3 size={18} aria-hidden="true" />
           </div>
           <div className="case-list">
-            {modules.cases.items.map((item, index) => (
+            {modules.pageCases.items.map((item, index) => (
               <div className="case-row" key={item.title}>
                 <div>
                   <strong>{item.title}</strong>
@@ -864,21 +1379,6 @@ function LeadTable({
       </div>
     </article>
   )
-}
-
-function getFrontendFile(section: AdminSection) {
-  const files: Record<AdminSection, string> = {
-    overview: 'index.html',
-    home: 'index.html',
-    business: 'business.html',
-    cases: 'cases.html',
-    consult: 'consult.html',
-    cooperation: 'cooperation.html',
-    assets: 'assets/',
-    settings: 'GitHub Pages',
-  }
-
-  return files[section]
 }
 
 function getSectionLabel(section: AdminSection) {

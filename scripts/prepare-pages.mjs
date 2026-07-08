@@ -12,8 +12,8 @@ const rootFiles = [
   'cases.html',
   'consult.html',
   'cooperation.html',
-  'nav.html',
-  'footer.html',
+  'news.html',
+  'gallery.html',
 ]
 
 await rm(siteDir, { recursive: true, force: true })
@@ -26,3 +26,10 @@ for (const file of rootFiles) {
 await cp(join(root, 'assets'), join(siteDir, 'assets'), {
   recursive: true,
 })
+
+await cp(join(root, 'partials'), join(siteDir, 'partials'), {
+  recursive: true,
+})
+
+await mkdir(join(siteDir, 'scripts'), { recursive: true })
+await cp(join(root, 'scripts', 'site-config.js'), join(siteDir, 'scripts', 'site-config.js'))

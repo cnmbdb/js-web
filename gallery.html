@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>实景图库 - 速芯算力</title>
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css" rel="stylesheet">
+  <style>
+    :root{--background:#fff;--foreground:#0f172a;--muted:#f6f8f7;--muted-foreground:#64746d;--border:#e3e8e5;--primary:#16a34a;--radius:8px;--shadow:0 1px 2px rgba(16,24,40,.06),0 16px 40px rgba(16,24,40,.08)}*{box-sizing:border-box}body{margin:0;font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;background:#fff;color:var(--foreground);min-width:320px}a{text-decoration:none;color:inherit}.page{min-height:100vh;background:linear-gradient(180deg,#fff,#f7fbf8 55%,#fff)}
+    .topbar{height:76px;padding:0 clamp(28px,5.4vw,104px);display:flex;align-items:center;gap:24px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.92);position:sticky;top:0;z-index:20;backdrop-filter:blur(14px)}.brand{width:170px;display:flex;align-items:center;gap:10px;font-weight:800;color:#0f172a}.brand-mark{width:34px;height:34px;border-radius:8px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;box-shadow:0 8px 18px rgba(22,163,74,.18)}.brand-text{font-size:21px;line-height:1;white-space:nowrap}.main-nav{flex:1;display:flex;justify-content:center;gap:clamp(14px,1.4vw,30px);font-size:15px;font-weight:700;color:#33413a}.main-nav a{height:76px;display:flex;align-items:center;position:relative;white-space:nowrap}.main-nav a.active{color:var(--primary)}.main-nav a.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--primary);border-radius:999px}.nav-actions{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:700}.ghost-action,.solid-action{height:40px;padding:0 16px;border-radius:var(--radius);display:flex;align-items:center;gap:8px;white-space:nowrap}.ghost-action{border:1px solid var(--border);background:#fff}.solid-action{background:var(--primary);color:#fff}.menu-button{display:none}
+    .head{text-align:center;padding:52px 20px 38px;border-bottom:1px solid var(--border);background:radial-gradient(circle at 50% 0,rgba(22,163,74,.12),transparent 34%),#fff}.head h1{font-size:38px;margin:0 0 14px;font-weight:800}.head p{font-size:18px;margin:0;color:var(--muted-foreground);font-weight:700}.gallery{width:min(1320px,92vw);margin:34px auto 70px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.photo{background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);transition:.18s}.photo:hover{transform:translateY(-2px);border-color:rgba(22,163,74,.45)}.photo:nth-child(1),.photo:nth-child(6){grid-column:span 2}.photo img{width:100%;height:220px;object-fit:cover;display:block}.photo:nth-child(1) img,.photo:nth-child(6) img{height:280px}.photo div{padding:16px}.photo h2{font-size:18px;margin:0 0 8px}.photo p{margin:0;color:var(--muted-foreground);line-height:1.6;font-weight:600}.site-footer{border-top:1px solid var(--border);background:#fff;padding:28px 24px}.footer-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}.footer-actions a{height:40px;min-width:150px;border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700}.footer-meta{display:none}
+    @media(max-width:1320px){.topbar{padding:0 5%;gap:18px}.brand{width:150px}.main-nav{gap:14px;font-size:14px}.nav-actions{display:none}.gallery{grid-template-columns:repeat(2,1fr)}}@media(max-width:860px){.topbar{height:auto;min-height:76px;padding:16px 20px}.main-nav{display:none}.menu-button{display:block;margin-left:auto;border:0;background:var(--primary);color:#fff;border-radius:var(--radius);width:42px;height:38px;font-size:22px}.topbar.open{display:grid;grid-template-columns:1fr auto;align-items:start;height:auto}.topbar.open .menu-button{grid-column:2;grid-row:1;justify-self:end;align-self:center}.topbar.open .main-nav,.topbar.open .nav-actions{grid-column:1/3;display:flex;flex-direction:column;align-items:flex-start;gap:8px}.topbar.open .main-nav a{height:auto;padding:8px 0}.topbar.open .main-nav a.active:after{display:none}}@media(max-width:720px){.head h1{font-size:32px}.head p{font-size:16px}.gallery{grid-template-columns:1fr}.photo:nth-child(1),.photo:nth-child(6){grid-column:auto}.photo img,.photo:nth-child(1) img,.photo:nth-child(6) img{height:230px}}
+  </style>
+</head>
+<body data-page="gallery">
+  <div class="page">
+    <div id="site-nav"></div>
+    <section class="head"><h1>实景图库</h1><p>机房环境 | 绿电园区 | 算力设备 | 项目交付现场</p></section>
+    <main class="gallery">
+      <article class="photo"><img src="assets/materials/server-room.png" alt="绿色智算机房"><div><h2>智算机房托管区</h2><p>标准化机柜、供配电、网络与运维动线实景。</p></div></article>
+      <article class="photo"><img src="assets/materials/factory-aerial.png" alt="绿电园区航拍"><div><h2>绿电园区航拍</h2><p>园区资源与算力基础设施协同建设场景。</p></div></article>
+      <article class="photo"><img src="assets/materials/hero-chip.png" alt="GPU算力硬件"><div><h2>GPU算力硬件</h2><p>面向企业AIGC、视觉、渲染与推理任务。</p></div></article>
+      <article class="photo"><img src="assets/materials/grid-floor.png" alt="机房地板与线缆"><div><h2>机房地板与线缆</h2><p>高密度部署下的布线与散热空间。</p></div></article>
+      <article class="photo"><img src="assets/materials/certificates.png" alt="资质文件"><div><h2>项目资质材料</h2><p>合作考察、渠道招商与园区对接资料。</p></div></article>
+      <article class="photo"><img src="assets/materials/team-portraits.png" alt="交付团队"><div><h2>交付与运维团队</h2><p>从方案测算、设备交付到现场运维的协作支持。</p></div></article>
+    </main>
+    <div id="site-footer"></div>
+  </div>
+  <script src="scripts/site-config.js"></script>
+  <script>
+    async function include(id,file){const el=document.getElementById(id);el.innerHTML=await (await fetch(file + "?v=nav-pages-2")).text();}
+    Promise.all([include("site-nav","partials/nav.html"),include("site-footer","partials/footer.html")]).then(()=>{const page=document.body.dataset.page;document.querySelectorAll(`[data-page="${page}"]`).forEach(a=>a.classList.add("active"));document.querySelector(".menu-button")?.addEventListener("click",()=>document.querySelector(".topbar").classList.toggle("open"));window.SuxinSiteConfig?.apply?.();});
+  </script>
+</body>
+</html>

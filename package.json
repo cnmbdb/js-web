@@ -1,5 +1,11 @@
 {
+  "scripts": {
+    "admin:build": "npm --prefix admin run build",
+    "admin:dev": "npm --prefix admin run dev",
+    "tanstack": "tanstack"
+  },
   "devDependencies": {
+    "@tanstack/cli": "^0.69.5",
     "shadcn": "^4.13.0"
   }
 }

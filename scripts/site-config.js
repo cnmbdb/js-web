@@ -46,6 +46,46 @@
     })
   }
 
+  function updateLink(selector, config) {
+    document.querySelectorAll(selector).forEach((element) => {
+      if (config.label) {
+        const icon = element.querySelector('i')
+        element.textContent = config.label
+        if (icon) element.prepend(icon)
+      }
+
+      if (config.href) element.setAttribute('href', config.href)
+
+      if (config.newTab) {
+        element.setAttribute('target', '_blank')
+        element.setAttribute('rel', 'noopener noreferrer')
+        return
+      }
+
+      element.removeAttribute('target')
+      element.removeAttribute('rel')
+    })
+  }
+
+  function updateLinkTarget(element, newTab) {
+    if (newTab) {
+      element.setAttribute('target', '_blank')
+      element.setAttribute('rel', 'noopener noreferrer')
+      return
+    }
+
+    element.removeAttribute('target')
+    element.removeAttribute('rel')
+  }
+
+  function toCssSize(value, fallback) {
+    const text = String(value || '').trim()
+    if (!text) return fallback
+    if (/^\d+(\.\d+)?$/.test(text)) return `${text}px`
+    if (/^\d+(\.\d+)?(px|rem|em|%)$/.test(text)) return text
+    return fallback
+  }
+
   function applyNavigation(navigation) {
     if (!navigation) return
 
@@ -82,18 +122,108 @@
     if (!branding) return
 
     setText('.brand-text', branding.brandName)
+    const logoSize = toCssSize(branding.logoImageSize, '34px')
+    const logoTextSize = toCssSize(branding.logoTextSize, '21px')
+
+    document.querySelectorAll('.brand-text').forEach((element) => {
+      element.style.fontSize = logoTextSize
+    })
+
+    document.querySelectorAll('.brand').forEach((element) => {
+      element.style.width = 'auto'
+      element.style.minWidth = 'max-content'
+      element.style.flexShrink = '0'
+    })
+
     if (branding.siteTitle) document.title = branding.siteTitle
     document.querySelectorAll('.brand-mark').forEach((element) => {
+      const imageSrc = String(branding.logoImageSrc || '').trim()
+      const iconClass = String(branding.logoIconClass || 'ri-stack-line').trim()
       element.style.display = branding.showBrandMark === false ? 'none' : ''
+      element.style.width = logoSize
+      element.style.height = logoSize
+      element.style.minWidth = logoSize
+      element.style.flexShrink = '0'
+
+      if (imageSrc) {
+        element.innerHTML = ''
+        const image = document.createElement('img')
+        image.alt = branding.brandName || 'Logo'
+        image.src = imageSrc
+        image.style.width = '100%'
+        image.style.height = '100%'
+        image.style.objectFit = 'contain'
+        image.style.display = 'block'
+        element.appendChild(image)
+        return
+      }
+
+      element.innerHTML = ''
+      if (iconClass) {
+        const icon = document.createElement('i')
+        icon.className = iconClass
+        element.appendChild(icon)
+      }
     })
   }
 
   function applyFooter(footer) {
     if (!footer) return
 
-    replaceActionText('.footer-actions a:nth-child(1)', footer.phone)
-    replaceActionText('.footer-actions a:nth-child(2)', footer.wechat)
-    replaceActionText('.footer-actions a:nth-child(3)', footer.address)
+    if (Array.isArray(footer.menuItems)) {
+      const defaultIconClasses = [
+        'ri-customer-service-2-line',
+        'ri-wechat-line',
+        'ri-map-pin-line',
+        'ri-video-chat-line',
+      ]
+
+      document.querySelectorAll('.footer-actions').forEach((container) => {
+        const existingIconClasses = Array.from(container.querySelectorAll('a i')).map((icon) => icon.className)
+        container.innerHTML = ''
+
+        footer.menuItems.forEach((item, index) => {
+          if (!item || !item.label) return
+
+          const link = document.createElement('a')
+          link.href = item.href || 'index.html'
+          updateLinkTarget(link, item.newTab)
+
+          const iconClass = existingIconClasses[index] || defaultIconClasses[index] || 'ri-links-line'
+          if (iconClass) {
+            const icon = document.createElement('i')
+            icon.className = iconClass
+            link.appendChild(icon)
+          }
+
+          link.append(document.createTextNode(item.label))
+          container.appendChild(link)
+        })
+      })
+
+      return
+    }
+
+    updateLink('.footer-actions a:nth-child(1)', {
+      label: footer.phone,
+      href: footer.phoneHref,
+      newTab: footer.phoneNewTab,
+    })
+    updateLink('.footer-actions a:nth-child(2)', {
+      label: footer.wechat,
+      href: footer.wechatHref,
+      newTab: footer.wechatNewTab,
+    })
+    updateLink('.footer-actions a:nth-child(3)', {
+      label: footer.address,
+      href: footer.addressHref,
+      newTab: footer.addressNewTab,
+    })
+    updateLink('.footer-actions a:nth-child(4)', {
+      label: footer.videoConsult,
+      href: footer.videoConsultHref,
+      newTab: footer.videoConsultNewTab,
+    })
 
     const footerItems = [
       footer.companyName,

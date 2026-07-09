@@ -9,16 +9,13 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import {
-  BarChart3,
   Bell,
   BookOpen,
   BriefcaseBusiness,
   ChevronDown,
-  ClipboardList,
-  Database,
-  Eye,
   FileText,
   GalleryVerticalEnd,
+  GripVertical,
   Handshake,
   Home,
   Image,
@@ -26,16 +23,13 @@ import {
   MessageSquareText,
   Palette,
   Search,
-  Settings,
   SquarePen,
   UsersRound,
 } from 'lucide-react'
 
 type AdminSection =
-  | 'overview'
   | 'navigation'
   | 'branding'
-  | 'blocks'
   | 'footer'
   | 'pageHome'
   | 'pageAbout'
@@ -65,8 +59,6 @@ type ModuleConfig = {
   items: Array<{ title: string; meta: string; state: string }>
 }
 
-type EditableSection = Exclude<AdminSection, 'overview'>
-
 type NavigationMenuItem = {
   id: string
   label: string
@@ -75,20 +67,28 @@ type NavigationMenuItem = {
   visible: boolean
 }
 
-type FieldValue = string | boolean | Array<NavigationMenuItem>
+type FooterMenuItem = {
+  id: string
+  label: string
+  href: string
+  newTab: boolean
+}
+
+type FieldValue = string | boolean | Array<NavigationMenuItem> | Array<FooterMenuItem>
 
 type EditableField = {
   id: string
   label: string
-  type: 'text' | 'textarea' | 'select' | 'toggle' | 'menu-list'
+  type: 'text' | 'textarea' | 'select' | 'toggle' | 'menu-list' | 'footer-menu-list'
   defaultValue: FieldValue
   hint?: string
   options?: Array<{ label: string; value: string }>
 }
 
-type AdminFormState = Record<EditableSection, Record<string, FieldValue>>
+type AdminFormState = Record<AdminSection, Record<string, FieldValue>>
 
 const SITE_CONFIG_KEY = 'suxin-site-config'
+const DEFAULT_LOGO_IMAGE_SRC = 'assets/materials/logo-nav.png'
 
 const pageTargetOptions = [
   { label: '首页', value: 'index.html', page: 'home' },
@@ -109,18 +109,22 @@ const defaultNavigationItems: Array<NavigationMenuItem> = pageTargetOptions.map(
   visible: true,
 }))
 
+const defaultFooterMenuItems: Array<FooterMenuItem> = [
+  { id: 'cooperation', label: '招商专线', href: 'cooperation.html', newTab: false },
+  { id: 'wechat', label: '企业微信', href: 'consult.html', newTab: false },
+  { id: 'address', label: '机房地址', href: 'about.html', newTab: false },
+  { id: 'video-consult', label: '视频咨询预约', href: 'cooperation.html', newTab: false },
+]
+
 const topNav: Array<{ label: string; section: AdminSection }> = [
-  { label: '控制台', section: 'overview' },
   { label: '导航设置', section: 'navigation' },
   { label: '页面设置', section: 'pageHome' },
   { label: '页脚配置', section: 'footer' },
 ]
 
 const primaryNav = [
-  { label: '控制台概览', icon: LayoutDashboard, section: 'overview' },
   { label: '导航设置', icon: GalleryVerticalEnd, section: 'navigation' },
   { label: 'Logo / 标题 Logo', icon: Image, section: 'branding' },
-  { label: '配置区块', icon: Settings, section: 'blocks' },
   { label: '页脚配置区块', icon: FileText, section: 'footer' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
 
@@ -188,7 +192,7 @@ const leads: Array<Lead> = [
   },
 ]
 
-const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
+const modules: Record<AdminSection, ModuleConfig> = {
   navigation: {
     id: 'navigation',
     title: '导航设置',
@@ -217,21 +221,6 @@ const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
       { title: '导航 Logo', meta: 'logo-nav.png / 顶部导航展示', state: '使用中' },
       { title: '标题 Logo', meta: 'logo-suxin.png / 页面标题展示', state: '使用中' },
       { title: '后台品牌标记', meta: '苏信智造后台 / S avatar', state: '待复核' },
-    ],
-  },
-  blocks: {
-    id: 'blocks',
-    title: '配置区块',
-    description: '统一管理首页推荐、业务区块、案例卡片和表单入口。',
-    stats: [
-      { label: '区块数量', value: '18', note: '跨 8 个页面' },
-      { label: '待复核', value: '3', note: '文案、图片、排序' },
-      { label: '复用组件', value: '6', note: 'CTA、图库、案例、资讯' },
-    ],
-    items: [
-      { title: '首页首屏区块', meta: '标题、说明、主按钮、背景视觉', state: '待复核' },
-      { title: '业务能力区块', meta: '核心业务、应用场景、案例推荐', state: '已发布' },
-      { title: '转化入口区块', meta: '招商合作、咨询表单、页脚 CTA', state: '已发布' },
     ],
   },
   footer: {
@@ -371,18 +360,6 @@ const modules: Record<Exclude<AdminSection, 'overview'>, ModuleConfig> = {
   },
 }
 
-const kpis = [
-  { label: '首页模块', value: '5', note: '主站页面已纳入管理', tone: 'primary' },
-  { label: '待跟进线索', value: '42', note: '来自 consult.html', tone: 'dark' },
-  { label: '案例浏览', value: '8,426', note: '近 30 天展示数据', tone: 'neutral' },
-]
-
-const updates = [
-  { title: '更新首页主视觉文案', meta: '首页管理 · 12 分钟前' },
-  { title: '新增工业数据看板案例', meta: '案例中心 · 今天 10:28' },
-  { title: '处理合作申请 3 条', meta: '合作申请 · 昨天' },
-]
-
 const publishOptions = [
   { label: '已发布', value: '已发布' },
   { label: '待复核', value: '待复核' },
@@ -447,7 +424,26 @@ function pageFields(title: string, subtitle: string): Array<EditableField> {
   ]
 }
 
-const editableSections: Record<EditableSection, { title: string; fields: Array<EditableField> }> = {
+const homeBlockFields: Array<EditableField> = [
+  { id: 'heroBlockTitle', label: '首页首屏区块名', type: 'text', defaultValue: '首页主视觉' },
+  { id: 'featureBlockTitle', label: '业务区块名', type: 'text', defaultValue: '四大业务入口' },
+  { id: 'caseBlockTitle', label: '案例区块名', type: 'text', defaultValue: '项目案例推荐' },
+  { id: 'leadBlockTitle', label: '线索区块名', type: 'text', defaultValue: '应用场景咨询' },
+  {
+    id: 'density',
+    label: '区块密度',
+    type: 'select',
+    defaultValue: 'balanced',
+    options: [
+      { label: '紧凑', value: 'compact' },
+      { label: '平衡', value: 'balanced' },
+      { label: '宽松', value: 'loose' },
+    ],
+  },
+  { id: 'showStats', label: '显示统计数据', type: 'toggle', defaultValue: true },
+]
+
+const editableSections: Record<AdminSection, { title: string; fields: Array<EditableField> }> = {
   navigation: {
     title: '导航配置',
     fields: [
@@ -478,56 +474,43 @@ const editableSections: Record<EditableSection, { title: string; fields: Array<E
       { id: 'brandName', label: '导航 Logo 文字', type: 'text', defaultValue: '速芯算力' },
       { id: 'siteTitle', label: '浏览器标题', type: 'text', defaultValue: '速芯算力 - 绿电算力基础设施服务商' },
       {
-        id: 'logoAsset',
-        label: 'Logo 资源',
-        type: 'select',
-        defaultValue: 'logo-nav.png',
-        options: [
-          { label: '导航 Logo', value: 'logo-nav.png' },
-          { label: '标题 Logo', value: 'logo-suxin.png' },
-          { label: '仅文字', value: 'text-only' },
-        ],
+        id: 'logoImageSrc',
+        label: 'Logo 图片链接 / 文件路径',
+        type: 'text',
+        defaultValue: DEFAULT_LOGO_IMAGE_SRC,
+        hint: `当前项目 Logo：${DEFAULT_LOGO_IMAGE_SRC}；也可替换为 https://... 外链`,
       },
+      {
+        id: 'logoIconClass',
+        label: '当前图标 Class',
+        type: 'text',
+        defaultValue: 'ri-stack-line',
+        hint: '当前前台引用的是 Remix Icon 的 ri-stack-line，可替换为其它图标 class',
+      },
+      { id: 'logoImageSize', label: 'Logo 图大小(px)', type: 'text', defaultValue: '34' },
+      { id: 'logoTextSize', label: 'Logo 文案大小(px)', type: 'text', defaultValue: '21' },
       { id: 'showBrandMark', label: '显示图标标记', type: 'toggle', defaultValue: true },
       { id: 'titleLogoText', label: '标题 Logo 文案', type: 'text', defaultValue: '绿电算力基础设施服务商' },
-    ],
-  },
-  blocks: {
-    title: '区块配置',
-    fields: [
-      { id: 'heroBlockTitle', label: '首页首屏区块名', type: 'text', defaultValue: '首页主视觉' },
-      { id: 'featureBlockTitle', label: '业务区块名', type: 'text', defaultValue: '四大业务入口' },
-      { id: 'caseBlockTitle', label: '案例区块名', type: 'text', defaultValue: '项目案例推荐' },
-      { id: 'leadBlockTitle', label: '线索区块名', type: 'text', defaultValue: '应用场景咨询' },
-      {
-        id: 'density',
-        label: '区块密度',
-        type: 'select',
-        defaultValue: 'balanced',
-        options: [
-          { label: '紧凑', value: 'compact' },
-          { label: '平衡', value: 'balanced' },
-          { label: '宽松', value: 'loose' },
-        ],
-      },
-      { id: 'showStats', label: '显示统计数据', type: 'toggle', defaultValue: true },
     ],
   },
   footer: {
     title: '页脚配置',
     fields: [
-      { id: 'companyName', label: '公司/品牌名', type: 'text', defaultValue: '速芯算力' },
-      { id: 'serviceLine', label: '服务说明', type: 'text', defaultValue: 'GPU算力硬件销售' },
-      { id: 'hostingLine', label: '托管说明', type: 'text', defaultValue: '智算机房托管' },
-      { id: 'phone', label: '联系电话', type: 'text', defaultValue: '招商专线' },
-      { id: 'wechat', label: '企业微信', type: 'text', defaultValue: '企业微信' },
-      { id: 'address', label: '地址入口', type: 'text', defaultValue: '机房地址' },
-      { id: 'showMeta', label: '显示页脚信息', type: 'toggle', defaultValue: true },
+      {
+        id: 'menuItems',
+        label: '页脚菜单',
+        type: 'footer-menu-list',
+        defaultValue: defaultFooterMenuItems,
+        hint: '每一行左侧是页脚菜单文案，右侧是跳转链接；拖动行可以调整前台页脚顺序',
+      },
     ],
   },
   pageHome: {
     title: '首页配置',
-    fields: pageFields('绿电算力基础设施服务商', 'GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海'),
+    fields: [
+      ...pageFields('绿电算力基础设施服务商', 'GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海'),
+      ...homeBlockFields,
+    ],
   },
   pageAbout: {
     title: '关于速芯配置',
@@ -568,6 +551,29 @@ function buildDefaultFormState(): AdminFormState {
   ) as AdminFormState
 }
 
+function migrateLegacyFooterSection(section?: Record<string, FieldValue>) {
+  if (!section || Array.isArray(section.menuItems)) {
+    return section
+  }
+
+  const legacyItems = [
+    ['phone', 'phoneHref', 'phoneNewTab'],
+    ['wechat', 'wechatHref', 'wechatNewTab'],
+    ['address', 'addressHref', 'addressNewTab'],
+    ['videoConsult', 'videoConsultHref', 'videoConsultNewTab'],
+  ] as const
+
+  return {
+    ...section,
+    menuItems: legacyItems.map(([labelKey, hrefKey, newTabKey], index) => ({
+      id: defaultFooterMenuItems[index]?.id ?? `footer-${index + 1}`,
+      label: String(section[labelKey] || defaultFooterMenuItems[index]?.label || `菜单 ${index + 1}`),
+      href: String(section[hrefKey] || defaultFooterMenuItems[index]?.href || 'index.html'),
+      newTab: Boolean(section[newTabKey]),
+    })),
+  }
+}
+
 function readFormState(): AdminFormState {
   const fallback = buildDefaultFormState()
 
@@ -581,13 +587,23 @@ function readFormState(): AdminFormState {
       return fallback
     }
 
-    const parsed = JSON.parse(saved) as { sections?: Partial<AdminFormState> }
+    const parsed = JSON.parse(saved) as {
+      sections?: Partial<AdminFormState> & { blocks?: Record<string, FieldValue> }
+    }
+    const savedSections = parsed.sections ?? {}
+    const savedBranding = savedSections.branding
+    if (savedBranding && savedBranding.logoImageSrc === '') {
+      savedBranding.logoImageSrc = DEFAULT_LOGO_IMAGE_SRC
+    }
+    savedSections.footer = migrateLegacyFooterSection(savedSections.footer as Record<string, FieldValue>)
+
     return Object.fromEntries(
       Object.entries(fallback).map(([section, values]) => [
         section,
         {
           ...values,
-          ...(parsed.sections?.[section as EditableSection] ?? {}),
+          ...(section === 'pageHome' ? (savedSections.blocks ?? {}) : {}),
+          ...(savedSections[section as AdminSection] ?? {}),
         },
       ]),
     ) as AdminFormState
@@ -629,7 +645,7 @@ function isTopNavActive(section: AdminSection, activeSection: AdminSection) {
 }
 
 export function AdminDashboard() {
-  const [activeSection, setActiveSection] = useState<AdminSection>('overview')
+  const [activeSection, setActiveSection] = useState<AdminSection>('navigation')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [configState, setConfigState] = useState<AdminFormState>(() => readFormState())
@@ -711,7 +727,7 @@ export function AdminDashboard() {
     setIsMobileMenuOpen(false)
   }
 
-  const updateConfigField = (section: EditableSection, fieldId: string, value: FieldValue) => {
+  const updateConfigField = (section: AdminSection, fieldId: string, value: FieldValue) => {
     setConfigState((current) => ({
       ...current,
       [section]: {
@@ -768,7 +784,7 @@ export function AdminDashboard() {
       ) : null}
 
       <aside className="sidebar" aria-label="后台导航">
-        <p className="nav-group">控制台</p>
+        <p className="nav-group">配置管理</p>
         <SidebarNav
           activeSection={activeSection}
           items={primaryNav}
@@ -789,24 +805,15 @@ export function AdminDashboard() {
       </aside>
 
       <section className="workspace">
-        {activeSection === 'overview' ? (
-          <OverviewPage
-            onSelect={selectSection}
-            table={table}
-            leadView={leadView}
-            setLeadView={setLeadView}
-          />
-        ) : (
-          <ModulePage
-            activeSection={activeSection}
-            formValues={configState[activeSection]}
-            lastSavedAt={lastSavedAt}
-            onConfigChange={updateConfigField}
-            table={table}
-            leadView={leadView}
-            setLeadView={setLeadView}
-          />
-        )}
+        <ModulePage
+          activeSection={activeSection}
+          formValues={configState[activeSection]}
+          lastSavedAt={lastSavedAt}
+          onConfigChange={updateConfigField}
+          table={table}
+          leadView={leadView}
+          setLeadView={setLeadView}
+        />
       </section>
     </main>
   )
@@ -830,7 +837,7 @@ function MobileMenu({
           <strong>{getSectionLabel(activeSection)}</strong>
         </div>
 
-        <p className="nav-group">控制台</p>
+        <p className="nav-group">配置管理</p>
         <SidebarNav activeSection={activeSection} items={primaryNav} onSelect={onSelect} />
 
         <p className="nav-group">页面设置</p>
@@ -882,131 +889,6 @@ function SidebarNav({
   )
 }
 
-function OverviewPage({
-  onSelect,
-  table,
-  leadView,
-  setLeadView,
-}: {
-  onSelect: (section: AdminSection) => void
-  table: ReturnType<typeof useReactTable<Lead>>
-  leadView: '全部' | '待跟进' | '方案中'
-  setLeadView: (view: '全部' | '待跟进' | '方案中') => void
-}) {
-  return (
-    <>
-      <h1>苏信智造后台</h1>
-
-      <section className="devtools-deck" aria-label="项目后台概览">
-        <div className="deck-copy">
-          <span><ClipboardList size={16} /> 开始使用</span>
-          <h2>管理官网内容、咨询线索和合作入口</h2>
-          <p>这个后台对应当前 GitHub Pages 官网，覆盖导航、品牌、页脚和 8 个前台页面。</p>
-          <div className="deck-actions">
-            <button className="ghost-button" onClick={() => onSelect('navigation')}>配置导航</button>
-            <button className="light-button" onClick={() => onSelect('pageHome')}>
-              <BookOpen size={16} />
-              编辑首页
-            </button>
-          </div>
-          <div className="setup-list">
-            {[
-              ['导航设置', '维护顶部导航、移动菜单和按钮顺序', GalleryVerticalEnd],
-              ['Logo / 标题 Logo', '同步品牌标识、标题图和后台标记', Image],
-              ['页面设置', '管理首页、关于速芯、核心业务等 8 个页面', Home],
-            ].map(([title, detail, Icon], index) => {
-              const SetupIcon = Icon as typeof Home
-              return (
-                <button
-                  className="setup-row"
-                  key={title as string}
-                  onClick={() => onSelect(['navigation', 'branding', 'pageHome'][index] as AdminSection)}
-                >
-                  <span className="checkmark">✓</span>
-                  <SetupIcon size={18} />
-                  <div>
-                    <strong>{index + 1}. {title as string}</strong>
-                    <p>{detail as string}</p>
-                  </div>
-                  <span className="row-arrow">→</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <aside className="recommend-panel">
-          <span>推荐操作</span>
-          <h2>保持官网就绪</h2>
-          {[
-            ['导航设置', '检查顶部导航和移动端菜单', Eye, 'navigation'],
-            ['配置区块', '整理首页推荐、业务和 CTA 区块', Settings, 'blocks'],
-            ['应用场景', '处理场景内容与咨询线索', MessageSquareText, 'pageConsult'],
-            ['实景图库', '整理现场图片与案例素材', Image, 'pageGallery'],
-          ].map(([title, detail, Icon, section]) => {
-            const RecIcon = Icon as typeof Eye
-            return (
-              <button
-                className="recommend-row"
-                key={title as string}
-                onClick={() => onSelect(section as AdminSection)}
-              >
-                <RecIcon size={20} />
-                <span>
-                  <strong>{title as string}</strong>
-                  <small>{detail as string}</small>
-                </span>
-              </button>
-            )
-          })}
-        </aside>
-      </section>
-
-      <section className="usage-panel" aria-label="项目状态">
-        <div className="usage-main">
-          <div className="panel-heading plain">
-            <div>
-              <h2>项目状态</h2>
-              <p>监控页面、线索和案例发布情况</p>
-            </div>
-            <button className="ghost-button">
-              <Database size={16} />
-              同步数据
-            </button>
-          </div>
-          <div className="kpi-grid">
-            {kpis.map((item) => (
-              <article className={`metric metric-${item.tone}`} key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <p>{item.note}</p>
-                {item.label === '首页模块' ? (
-                  <div className="mini-bars" aria-hidden="true">
-                    {Array.from({ length: 12 }).map((_, index) => (
-                      <i key={index} style={{ height: `${28 + index * 2}px` }} />
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </div>
-        </div>
-        <aside className="balance-card">
-          <span>GitHub Pages</span>
-          <strong>/admin/</strong>
-          <p>静态后台入口</p>
-          <button onClick={() => onSelect('footer')}>
-            查看页脚配置
-            <span>→</span>
-          </button>
-        </aside>
-      </section>
-
-      <DashboardBottom table={table} leadView={leadView} setLeadView={setLeadView} />
-    </>
-  )
-}
-
 function ModulePage({
   activeSection,
   formValues,
@@ -1016,10 +898,10 @@ function ModulePage({
   leadView,
   setLeadView,
 }: {
-  activeSection: EditableSection
+  activeSection: AdminSection
   formValues: Record<string, FieldValue>
   lastSavedAt: string
-  onConfigChange: (section: EditableSection, fieldId: string, value: FieldValue) => void
+  onConfigChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
   table: ReturnType<typeof useReactTable<Lead>>
   leadView: '全部' | '待跟进' | '方案中'
   setLeadView: (view: '全部' | '待跟进' | '方案中') => void
@@ -1048,10 +930,10 @@ function ConfigEditor({
   lastSavedAt,
   onChange,
 }: {
-  activeSection: EditableSection
+  activeSection: AdminSection
   formValues: Record<string, FieldValue>
   lastSavedAt: string
-  onChange: (section: EditableSection, fieldId: string, value: FieldValue) => void
+  onChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
 }) {
   const editableConfig = editableSections[activeSection]
 
@@ -1095,7 +977,17 @@ function ConfigField({
       <NavigationMenuEditor
         field={field}
         onChange={onChange}
-        value={Array.isArray(value) ? value : defaultNavigationItems}
+        value={Array.isArray(value) ? (value as Array<NavigationMenuItem>) : defaultNavigationItems}
+      />
+    )
+  }
+
+  if (field.type === 'footer-menu-list') {
+    return (
+      <FooterMenuEditor
+        field={field}
+        onChange={onChange}
+        value={Array.isArray(value) ? (value as Array<FooterMenuItem>) : defaultFooterMenuItems}
       />
     )
   }
@@ -1254,59 +1146,121 @@ function NavigationMenuEditor({
   )
 }
 
-function DashboardBottom({
-  table,
-  leadView,
-  setLeadView,
+function FooterMenuEditor({
+  field,
+  value,
+  onChange,
 }: {
-  table: ReturnType<typeof useReactTable<Lead>>
-  leadView: '全部' | '待跟进' | '方案中'
-  setLeadView: (view: '全部' | '待跟进' | '方案中') => void
+  field: EditableField
+  value: Array<FooterMenuItem>
+  onChange: (value: Array<FooterMenuItem>) => void
 }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+
+  const updateItem = (id: string, patch: Partial<FooterMenuItem>) => {
+    onChange(value.map((item) => (item.id === id ? { ...item, ...patch } : item)))
+  }
+
+  const addItem = () => {
+    const nextIndex = value.length + 1
+    onChange([
+      ...value,
+      {
+        id: `footer-custom-${Date.now()}`,
+        label: `新菜单 ${nextIndex}`,
+        href: 'index.html',
+        newTab: false,
+      },
+    ])
+  }
+
+  const removeItem = (id: string) => {
+    onChange(value.filter((item) => item.id !== id))
+  }
+
+  const moveItem = (fromId: string, toId: string) => {
+    if (fromId === toId) return
+
+    const fromIndex = value.findIndex((item) => item.id === fromId)
+    const toIndex = value.findIndex((item) => item.id === toId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextItems = [...value]
+    const [movedItem] = nextItems.splice(fromIndex, 1)
+    nextItems.splice(toIndex, 0, movedItem)
+    onChange(nextItems)
+  }
+
   return (
-    <section className="content-grid">
-      <LeadTable table={table} leadView={leadView} setLeadView={setLeadView} />
+    <div className="menu-editor footer-menu-editor span-2">
+      <div className="menu-editor-head">
+        <div>
+          <strong>{field.label}</strong>
+          {field.hint ? <small>{field.hint}</small> : null}
+        </div>
+        <button className="ghost-button" onClick={addItem} type="button">
+          新增菜单
+        </button>
+      </div>
 
-      <aside className="right-rail">
-        <article className="panel">
-          <div className="panel-heading compact">
-            <h2>案例表现</h2>
-            <BarChart3 size={18} aria-hidden="true" />
+      <div className="menu-list-editor">
+        {value.map((item, index) => (
+          <div
+            className={`menu-edit-row footer-menu-row${draggingId === item.id ? ' is-dragging' : ''}`}
+            draggable
+            key={item.id}
+            onDragEnd={() => setDraggingId(null)}
+            onDragOver={(event) => event.preventDefault()}
+            onDragStart={(event) => {
+              setDraggingId(item.id)
+              event.dataTransfer.effectAllowed = 'move'
+              event.dataTransfer.setData('text/plain', item.id)
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              moveItem(event.dataTransfer.getData('text/plain') || draggingId || '', item.id)
+              setDraggingId(null)
+            }}
+          >
+            <span className="menu-order drag-handle" aria-label={`拖动第 ${index + 1} 项排序`}>
+              <GripVertical size={16} aria-hidden="true" />
+              <span>{index + 1}</span>
+            </span>
+            <label className="menu-cell">
+              <span>菜单文案</span>
+              <input
+                onChange={(event) => updateItem(item.id, { label: event.target.value })}
+                value={item.label}
+              />
+            </label>
+            <label className="menu-cell">
+              <span>跳转链接</span>
+              <input
+                onChange={(event) => updateItem(item.id, { href: event.target.value })}
+                placeholder="index.html 或 https://..."
+                value={item.href}
+              />
+            </label>
+            <label className="menu-visible">
+              <input
+                checked={item.newTab}
+                onChange={(event) => updateItem(item.id, { newTab: event.target.checked })}
+                type="checkbox"
+              />
+              <span>新页面</span>
+            </label>
+            <button
+              className="danger-button"
+              disabled={value.length <= 1}
+              onClick={() => removeItem(item.id)}
+              type="button"
+            >
+              删除
+            </button>
           </div>
-          <div className="case-list">
-            {modules.pageCases.items.map((item, index) => (
-              <div className="case-row" key={item.title}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{['2,846', '1,930', '1,284'][index]} 浏览</span>
-                </div>
-                <div className="progress" aria-label={`${item.title} 表现`}>
-                  <span style={{ width: `${[86, 72, 58][index]}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading compact">
-            <h2>最近更新</h2>
-            <SquarePen size={18} aria-hidden="true" />
-          </div>
-          <div className="updates">
-            {updates.map((item) => (
-              <div className="update-item" key={item.title}>
-                <span className="update-dot" />
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.meta}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-      </aside>
-    </section>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -1382,9 +1336,5 @@ function LeadTable({
 }
 
 function getSectionLabel(section: AdminSection) {
-  if (section === 'overview') {
-    return '概览'
-  }
-
   return modules[section].title
 }

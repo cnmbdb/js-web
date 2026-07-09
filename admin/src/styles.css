@@ -1057,17 +1057,42 @@ tbody tr:last-child td {
   padding: 12px;
 }
 
+.menu-edit-row.is-dragging {
+  border-color: rgba(142, 162, 255, 0.7);
+  opacity: 0.62;
+}
+
+.footer-menu-row {
+  grid-template-columns: 44px minmax(180px, 0.8fr) minmax(240px, 1.2fr) 104px 74px;
+}
+
 .menu-order {
-  display: grid;
-  width: 30px;
+  display: inline-flex;
+  width: 34px;
   height: 38px;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: #0f0f0f;
   color: #dcdcdc;
   font-size: 13px;
   font-weight: 820;
+}
+
+.drag-handle {
+  width: 40px;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle svg {
+  color: var(--faint);
+  flex: 0 0 auto;
 }
 
 .menu-cell {
@@ -1373,6 +1398,39 @@ tbody tr:last-child td {
 
   .config-form {
     grid-template-columns: 1fr;
+  }
+
+  .menu-editor-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .menu-editor-head .ghost-button {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .menu-edit-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .footer-menu-row {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .menu-cell {
+    grid-column: 2;
+  }
+
+  .menu-visible {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .danger-button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .panel-heading {

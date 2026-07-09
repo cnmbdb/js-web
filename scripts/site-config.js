@@ -78,6 +78,502 @@
     element.removeAttribute('rel')
   }
 
+  function setImage(image, src, alt) {
+    if (!image) return
+    if (src) image.setAttribute('src', src)
+    if (alt) image.setAttribute('alt', alt)
+  }
+
+  function createIcon(className) {
+    const icon = document.createElement('i')
+    icon.className = className || 'ri-links-line'
+    return icon
+  }
+
+  function createTextElement(tagName, className, text) {
+    const element = document.createElement(tagName)
+    if (className) element.className = className
+    element.textContent = text || ''
+    return element
+  }
+
+  function appendIconText(element, iconClass, label, trailingIconClass) {
+    element.innerHTML = ''
+    if (iconClass) {
+      element.appendChild(createIcon(iconClass))
+    }
+    element.append(document.createTextNode(label || '未命名'))
+    if (trailingIconClass) {
+      const trailingIcon = createIcon(trailingIconClass)
+      trailingIcon.classList.add('right')
+      element.appendChild(trailingIcon)
+    }
+  }
+
+  function ensureRuntimeStyle(id, cssText) {
+    if (document.getElementById(id)) return
+
+    const style = document.createElement('style')
+    style.id = id
+    style.textContent = cssText
+    document.head.appendChild(style)
+  }
+
+  function applyHero(pageConfig) {
+    const hero = pageConfig.hero || {
+      title: pageConfig.heroTitle,
+      subtitle: pageConfig.heroSubtitle,
+    }
+
+    setText('.head h1, .title h1, .page-head h1', hero.title)
+    setText('.head p, .title p, .page-head p', hero.subtitle)
+  }
+
+  function createSectionTitle(text) {
+    return createTextElement('h2', 'section-title', text || '未命名区块')
+  }
+
+  function createFormPanel(panel, panelClass, buttonClass) {
+    const form = document.createElement('form')
+    form.className = panelClass
+
+    const title = createTextElement('h2', '', panel.title || '未命名表单')
+    if (panel.titleIconClass) {
+      title.append(document.createTextNode(' '))
+      title.appendChild(createIcon(panel.titleIconClass))
+    }
+    form.appendChild(title)
+
+    const grid = document.createElement('div')
+    grid.className = 'form-grid'
+    ;(panel.fields || []).forEach((field) => {
+      const label = createTextElement('label', '', field.label || '字段')
+      const inputLike = createTextElement('div', 'field', field.placeholder || '输入内容')
+      if (field.wide) inputLike.style.gridColumn = 'span 3'
+      if (field.suffixIconClass) {
+        inputLike.append(document.createTextNode(' '))
+        inputLike.appendChild(createIcon(field.suffixIconClass))
+      }
+      grid.append(label, inputLike)
+    })
+
+    const buttonRow = document.createElement('div')
+    buttonRow.className = 'btn-row'
+    const button = document.createElement('button')
+    button.className = buttonClass
+    button.type = 'button'
+    button.textContent = panel.buttonLabel || '提交'
+    buttonRow.appendChild(button)
+    grid.appendChild(buttonRow)
+    form.appendChild(grid)
+    return form
+  }
+
+  function applyFormPanels(selector, panels, panelClass, buttonClass) {
+    if (!Array.isArray(panels) || !panels.length) return
+
+    document.querySelectorAll(selector).forEach((container) => {
+      container.innerHTML = ''
+      panels.forEach((panel) => {
+        if (!panel) return
+        container.appendChild(createFormPanel(panel, panelClass, buttonClass))
+      })
+    })
+  }
+
+  function applyDownloadSection(selector, section, gridClass) {
+    if (!section || !Array.isArray(section.items)) return
+
+    document.querySelectorAll(selector).forEach((container) => {
+      container.innerHTML = ''
+      container.appendChild(createTextElement('h2', '', section.title || '资料下载'))
+
+      const grid = document.createElement('div')
+      grid.className = gridClass
+      section.items.forEach((item) => {
+        if (!item) return
+        const link = createTextElement('a', 'download-card', item.label || '未命名资料')
+        link.href = item.href || '#'
+        grid.appendChild(link)
+      })
+      container.appendChild(grid)
+    })
+  }
+
+  function applyHomeCarousel(slides) {
+    if (!Array.isArray(slides) || !slides.length) return
+
+    const firstSlide = slides[0]
+    setText('.hero-copy > h1', firstSlide.title)
+    setText('.hero-copy > p', firstSlide.subtitle)
+    updateLink('.hero-copy > .hero-actions a:first-child', {
+      label: firstSlide.primaryLabel,
+      href: firstSlide.primaryHref,
+    })
+    updateLink('.hero-copy > .hero-actions a:last-child', {
+      label: firstSlide.secondaryLabel,
+      href: firstSlide.secondaryHref,
+    })
+
+    document.querySelectorAll('.carousel-slide').forEach((slideElement, index) => {
+      const slide = slides[index]
+      if (!slide) return
+
+      setImage(slideElement.querySelector('img'), slide.imageSrc, slide.imageAlt)
+      setText(`.carousel-slide:nth-child(${index + 1}) .carousel-caption h2`, slide.title)
+      setText(`.carousel-slide:nth-child(${index + 1}) .carousel-caption p`, slide.subtitle)
+      updateLink(`.carousel-slide:nth-child(${index + 1}) .hero-actions a:first-child`, {
+        label: slide.primaryLabel,
+        href: slide.primaryHref,
+      })
+      updateLink(`.carousel-slide:nth-child(${index + 1}) .hero-actions a:last-child`, {
+        label: slide.secondaryLabel,
+        href: slide.secondaryHref,
+      })
+    })
+  }
+
+  function applyHomeFeatureCards(cards) {
+    if (!Array.isArray(cards) || !cards.length) return
+
+    document.querySelectorAll('.feature-tabs').forEach((container) => {
+      container.innerHTML = ''
+      cards.forEach((card) => {
+        if (!card) return
+        const link = document.createElement('a')
+        link.className = card.highlighted ? 'feature-tab active' : 'feature-tab'
+        link.href = card.href || 'index.html'
+        link.appendChild(createIcon(card.iconClass))
+
+        const copy = document.createElement('span')
+        const title = document.createElement('strong')
+        title.textContent = card.title || '未命名推荐'
+        copy.appendChild(title)
+        copy.append(document.createTextNode(card.subtitle || ''))
+        link.appendChild(copy)
+        container.appendChild(link)
+      })
+    })
+  }
+
+  function applyHomeEntrances(items) {
+    if (!Array.isArray(items) || !items.length) return
+
+    document.querySelectorAll('.entrances').forEach((container) => {
+      container.innerHTML = ''
+      items.forEach((item) => {
+        if (!item) return
+        const link = document.createElement('a')
+        link.href = item.href || 'index.html'
+        link.appendChild(createIcon(item.iconClass))
+        const label = document.createElement('span')
+        label.textContent = item.label || '未命名入口'
+        link.appendChild(label)
+        container.appendChild(link)
+      })
+    })
+  }
+
+  function applyHomeMediaCards(cards) {
+    if (!Array.isArray(cards) || !cards.length) return
+
+    const cardSelectors = ['.media-card', '.news-card']
+    cardSelectors.forEach((selector, index) => {
+      const card = cards[index]
+      if (!card) return
+      setText(`${selector} .panel-title`, card.title)
+      document.querySelectorAll(selector).forEach((element) => {
+        setImage(element.querySelector('img'), card.imageSrc, card.imageAlt)
+      })
+    })
+  }
+
+  function applyAboutPage(pageConfig) {
+    applyHero(pageConfig)
+
+    const intro = pageConfig.intro
+    if (intro) {
+      document.querySelectorAll('.intro-copy').forEach((container) => {
+        container.innerHTML = ''
+        container.appendChild(createSectionTitle(intro.title))
+        ;(intro.paragraphs || []).forEach((paragraph) => {
+          if (!paragraph) return
+          container.appendChild(createTextElement('p', '', paragraph))
+        })
+        if (intro.highlight) {
+          const paragraph = document.createElement('p')
+          const mark = createTextElement('mark', '', intro.highlight)
+          paragraph.appendChild(mark)
+          container.appendChild(paragraph)
+        }
+      })
+      document.querySelectorAll('.intro img').forEach((image) => {
+        setImage(image, intro.imageSrc, intro.imageAlt)
+      })
+    }
+
+    const timeline = pageConfig.timeline
+    if (timeline && Array.isArray(timeline.items)) {
+      setText('.timeline .section-title', timeline.title)
+      document.querySelectorAll('.steps').forEach((container) => {
+        container.innerHTML = ''
+        timeline.items.forEach((item) => {
+          if (!item) return
+          const step = document.createElement('div')
+          step.className = 'step'
+          step.appendChild(createTextElement('strong', '', item.label || '未命名历程'))
+          step.appendChild(document.createElement('span'))
+          container.appendChild(step)
+        })
+      })
+    }
+
+    if (Array.isArray(pageConfig.panels)) {
+      document.querySelectorAll('.cards').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.panels.forEach((panel) => {
+          if (!panel) return
+          const article = document.createElement('article')
+          article.className = 'panel'
+          article.appendChild(createSectionTitle(panel.title))
+
+          if (panel.variant === 'chips') {
+            const capability = document.createElement('div')
+            capability.className = 'capability'
+            ;(panel.chips || []).forEach((chip) => {
+              capability.appendChild(createTextElement('div', 'chip', chip))
+            })
+            article.appendChild(capability)
+          } else {
+            const image = document.createElement('img')
+            setImage(image, panel.imageSrc, panel.imageAlt)
+            article.appendChild(image)
+          }
+
+          container.appendChild(article)
+        })
+      })
+    }
+  }
+
+  function applyBusinessPage(pageConfig) {
+    applyHero(pageConfig)
+
+    if (Array.isArray(pageConfig.businessCards)) {
+      document.querySelectorAll('.business-grid').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.businessCards.forEach((card) => {
+          if (!card) return
+          const article = document.createElement('article')
+          article.className = 'business-card'
+          article.appendChild(createIcon(card.iconClass))
+          article.appendChild(createTextElement('h2', '', card.title || '未命名业务'))
+          article.appendChild(createTextElement('p', '', card.description || ''))
+
+          const link = document.createElement('a')
+          link.href = card.href || 'consult.html'
+          link.append(document.createTextNode(card.linkLabel || '查看详情 '))
+          link.appendChild(createIcon('ri-arrow-right-s-line'))
+          article.appendChild(link)
+          container.appendChild(article)
+        })
+      })
+    }
+
+    const booking = pageConfig.bookingForm
+    if (booking) {
+      document.querySelectorAll('.booking').forEach((form) => {
+        const label = form.querySelector('label')
+        if (label) appendIconText(label, booking.iconClass, booking.label)
+        const inputs = form.querySelectorAll('input')
+        if (inputs[0]) inputs[0].setAttribute('placeholder', booking.namePlaceholder || '')
+        if (inputs[1]) inputs[1].setAttribute('placeholder', booking.demandPlaceholder || '')
+        const button = form.querySelector('button')
+        if (button) button.textContent = booking.buttonLabel || '提交预约'
+      })
+    }
+  }
+
+  function applyConsultPage(pageConfig) {
+    applyHero(pageConfig)
+
+    if (Array.isArray(pageConfig.quickLinks)) {
+      document.querySelectorAll('.quick').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.quickLinks.forEach((item) => {
+          if (!item) return
+          const link = document.createElement('a')
+          link.href = item.href || '#'
+          appendIconText(link, item.iconClass, item.label)
+          container.appendChild(link)
+        })
+      })
+    }
+
+    applyFormPanels('.forms', pageConfig.formPanels, 'panel', 'btn')
+    applyDownloadSection('main.wrap > section.panel', pageConfig.downloadSection, 'downloads')
+  }
+
+  function applyCasesPage(pageConfig) {
+    applyHero(pageConfig)
+
+    const tabs = pageConfig.tabs
+    if (tabs && Array.isArray(tabs.items)) {
+      document.querySelectorAll('.tabs').forEach((container) => {
+        container.innerHTML = ''
+        tabs.items.forEach((item, index) => {
+          if (!item) return
+          const button = createTextElement('button', index === 0 ? 'active' : '', item.label || '未命名分类')
+          button.type = 'button'
+          button.addEventListener('click', () => {
+            container.querySelectorAll('button').forEach((current) => current.classList.remove('active'))
+            button.classList.add('active')
+          })
+          container.appendChild(button)
+        })
+      })
+    }
+
+    if (Array.isArray(pageConfig.filters)) {
+      document.querySelectorAll('.filters').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.filters.forEach((item) => {
+          if (!item) return
+          const row = document.createElement('div')
+          row.className = 'filter-row'
+          appendIconText(row, item.iconClass, item.label, item.trailingIconClass)
+          container.appendChild(row)
+        })
+      })
+    }
+
+    if (Array.isArray(pageConfig.caseCards)) {
+      document.querySelectorAll('.case-grid').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.caseCards.forEach((item) => {
+          if (!item) return
+          const article = document.createElement('article')
+          article.className = item.highlighted ? 'case-card dark' : 'case-card'
+          article.appendChild(createTextElement('span', 'tag', item.tag))
+          article.appendChild(createTextElement('span', 'corner', item.corner))
+          const image = document.createElement('img')
+          setImage(image, item.imageSrc, item.imageAlt)
+          article.appendChild(image)
+          article.appendChild(createTextElement('h2', '', item.title || '未命名案例'))
+          if (item.status) {
+            const status = createTextElement('span', '', item.status)
+            if (item.mutedStatus) status.style.color = '#8a948e'
+            article.appendChild(status)
+          }
+          container.appendChild(article)
+        })
+      })
+    }
+
+    if (pageConfig.downloadCta) {
+      updateLink('.download a', {
+        label: pageConfig.downloadCta.label,
+        href: pageConfig.downloadCta.href,
+      })
+    }
+  }
+
+  function applyNewsPage(pageConfig) {
+    applyHero(pageConfig)
+
+    const lead = pageConfig.leadArticle
+    if (lead) {
+      document.querySelectorAll('.lead').forEach((article) => {
+        setImage(article.querySelector('img'), lead.imageSrc, lead.imageAlt)
+        const copy = article.querySelector('.lead-copy')
+        if (!copy) return
+        copy.innerHTML = ''
+        copy.appendChild(createTextElement('span', 'kicker', lead.kicker || '资讯'))
+        copy.appendChild(createTextElement('h2', '', lead.title || '未命名资讯'))
+        copy.appendChild(createTextElement('p', '', lead.description || ''))
+      })
+    }
+
+    const topics = pageConfig.topics
+    if (topics && Array.isArray(topics.items)) {
+      document.querySelectorAll('.side').forEach((container) => {
+        container.innerHTML = ''
+        container.appendChild(createTextElement('h2', '', topics.title || '资讯分类'))
+        topics.items.forEach((item) => {
+          if (!item) return
+          const link = document.createElement('a')
+          link.className = 'topic'
+          link.href = item.href || '#'
+          appendIconText(link, item.iconClass, item.label)
+          container.appendChild(link)
+        })
+      })
+    }
+
+    if (Array.isArray(pageConfig.newsCards)) {
+      document.querySelectorAll('.list').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.newsCards.forEach((item) => {
+          if (!item) return
+          const article = document.createElement('article')
+          article.className = 'news-card'
+          article.appendChild(createIcon(item.iconClass))
+          article.appendChild(createTextElement('h3', '', item.title || '未命名资讯'))
+          article.appendChild(createTextElement('p', '', item.description || ''))
+          container.appendChild(article)
+        })
+      })
+    }
+  }
+
+  function applyCooperationPage(pageConfig) {
+    applyHero(pageConfig)
+
+    if (Array.isArray(pageConfig.partnerCards)) {
+      document.querySelectorAll('.partner-grid').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.partnerCards.forEach((item) => {
+          if (!item) return
+          const link = document.createElement('a')
+          link.className = 'partner-card'
+          link.href = item.href || '#forms'
+          link.appendChild(createIcon(item.iconClass))
+          link.appendChild(createTextElement('strong', '', item.label || '未命名合作'))
+          container.appendChild(link)
+        })
+      })
+    }
+
+    applyFormPanels('.forms', pageConfig.formPanels, 'form-panel', 'primary-btn')
+    applyDownloadSection('.download-panel', pageConfig.downloadSection, 'download-grid')
+  }
+
+  function applyGalleryPage(pageConfig) {
+    applyHero(pageConfig)
+
+    if (!Array.isArray(pageConfig.photos)) return
+
+    ensureRuntimeStyle(
+      'suxin-gallery-featured-style',
+      '.photo.featured{grid-column:span 2}.photo.featured img{height:280px}@media(max-width:720px){.photo.featured{grid-column:auto}.photo.featured img{height:230px}}',
+    )
+    document.querySelectorAll('.gallery').forEach((container) => {
+      container.innerHTML = ''
+      pageConfig.photos.forEach((item) => {
+        if (!item) return
+        const article = document.createElement('article')
+        article.className = item.featured ? 'photo featured' : 'photo'
+        const image = document.createElement('img')
+        setImage(image, item.imageSrc, item.imageAlt)
+        const copy = document.createElement('div')
+        copy.appendChild(createTextElement('h2', '', item.title || '未命名图片'))
+        copy.appendChild(createTextElement('p', '', item.description || ''))
+        article.append(image, copy)
+        container.appendChild(article)
+      })
+    })
+  }
+
   function toCssSize(value, fallback) {
     const text = String(value || '').trim()
     if (!text) return fallback
@@ -246,17 +742,59 @@
 
     const page = document.body.dataset.page
     if (page === 'home') {
-      setText('.hero-copy > h1', pageConfig.heroTitle)
-      setText('.hero-copy > p', pageConfig.heroSubtitle)
-      setText('.carousel-slide:first-child .carousel-caption h2', pageConfig.heroTitle)
-      setText('.carousel-slide:first-child .carousel-caption p', pageConfig.heroSubtitle)
-      setText('.carousel-slide:first-child .hero-actions a:first-child', pageConfig.primaryCtaLabel)
-      setText('.carousel-slide:first-child .hero-actions a:last-child', pageConfig.secondaryCtaLabel)
+      if (Array.isArray(pageConfig.carouselSlides)) {
+        applyHomeCarousel(pageConfig.carouselSlides)
+      } else {
+        setText('.hero-copy > h1', pageConfig.heroTitle)
+        setText('.hero-copy > p', pageConfig.heroSubtitle)
+        setText('.carousel-slide:first-child .carousel-caption h2', pageConfig.heroTitle)
+        setText('.carousel-slide:first-child .carousel-caption p', pageConfig.heroSubtitle)
+        setText('.carousel-slide:first-child .hero-actions a:first-child', pageConfig.primaryCtaLabel)
+        setText('.carousel-slide:first-child .hero-actions a:last-child', pageConfig.secondaryCtaLabel)
+      }
+
+      applyHomeFeatureCards(pageConfig.featureCards)
+      applyHomeEntrances(pageConfig.businessEntrances)
+      applyHomeMediaCards(pageConfig.mediaCards)
       return
     }
 
-    setText('.head h1', pageConfig.heroTitle)
-    setText('.head p', pageConfig.heroSubtitle)
+    if (page === 'about') {
+      applyAboutPage(pageConfig)
+      return
+    }
+
+    if (page === 'business') {
+      applyBusinessPage(pageConfig)
+      return
+    }
+
+    if (page === 'consult') {
+      applyConsultPage(pageConfig)
+      return
+    }
+
+    if (page === 'cases') {
+      applyCasesPage(pageConfig)
+      return
+    }
+
+    if (page === 'news') {
+      applyNewsPage(pageConfig)
+      return
+    }
+
+    if (page === 'cooperation') {
+      applyCooperationPage(pageConfig)
+      return
+    }
+
+    if (page === 'gallery') {
+      applyGalleryPage(pageConfig)
+      return
+    }
+
+    applyHero(pageConfig)
   }
 
   function applyConfig() {

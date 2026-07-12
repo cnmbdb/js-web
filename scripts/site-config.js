@@ -305,6 +305,11 @@
     document.querySelectorAll('.hero-video').forEach((video) => {
       if (hero.posterSrc) video.setAttribute('poster', hero.posterSrc)
       if (hero.posterAlt) video.setAttribute('aria-label', hero.posterAlt)
+      const shell = video.closest('.hero-video-shell')
+      if (shell) {
+        if (hero.maxWidth) shell.style.setProperty('--hero-video-max-width', hero.maxWidth)
+        if (hero.aspectRatio) shell.style.setProperty('--hero-video-aspect', hero.aspectRatio)
+      }
       loadHeroVideo(video, hero.videoSrc || video.dataset.src)
     })
   }

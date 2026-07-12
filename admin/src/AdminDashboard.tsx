@@ -83,6 +83,8 @@ type HomeHeroVideo = {
   videoSrc: string
   posterSrc: string
   posterAlt: string
+  maxWidth: string
+  aspectRatio: string
   primaryLabel: string
   primaryHref: string
   secondaryLabel: string
@@ -343,6 +345,8 @@ const defaultHomeHeroVideo: HomeHeroVideo = {
   videoSrc: 'assets/materials/1496.MP4',
   posterSrc: 'assets/materials/server-room.png',
   posterAlt: '绿色智算机房',
+  maxWidth: '1380px',
+  aspectRatio: '960 / 544',
   primaryLabel: '应用场景咨询',
   primaryHref: 'consult.html',
   secondaryLabel: '机房实地考察预约',
@@ -2333,6 +2337,14 @@ function HomeHeroVideoEditor({
         <label className="menu-cell">
           <span>封面说明</span>
           <input value={value.posterAlt} onChange={(event) => onChange({ ...value, posterAlt: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>卡片最大宽度</span>
+          <input value={value.maxWidth} onChange={(event) => onChange({ ...value, maxWidth: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>卡片宽高比</span>
+          <input value={value.aspectRatio} onChange={(event) => onChange({ ...value, aspectRatio: event.target.value })} />
         </label>
         <label className="menu-cell">
           <span>主按钮</span>

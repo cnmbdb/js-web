@@ -269,36 +269,43 @@
     })
   }
 
-  function applyHomeCarousel(slides) {
-    if (!Array.isArray(slides) || !slides.length) return
+  function loadHeroVideo(video, source) {
+    if (!video || !source || video.dataset.loadedSource === source) return
 
-    const firstSlide = slides[0]
-    setText('.hero-copy > h1', firstSlide.title)
-    setText('.hero-copy > p', firstSlide.subtitle)
-    updateLink('.hero-copy > .hero-actions a:first-child', {
-      label: firstSlide.primaryLabel,
-      href: firstSlide.primaryHref,
+    const startLoading = () => {
+      if (video.dataset.loadedSource === source) return
+      video.dataset.loadedSource = source
+      video.muted = true
+      video.defaultMuted = true
+      video.playsInline = true
+      video.src = source
+      video.load()
+      const playVideo = () => video.play().catch(() => {})
+      video.addEventListener('canplay', playVideo, { once: true })
+      playVideo()
+    }
+
+    window.requestAnimationFrame(startLoading)
+  }
+
+  function applyHomeHeroVideo(hero) {
+    if (!hero) return
+
+    setText('.hero-video-copy h1', hero.title)
+    setText('.hero-video-copy p', hero.subtitle)
+    updateLink('.hero-video-copy .hero-actions a:first-child', {
+      label: hero.primaryLabel,
+      href: hero.primaryHref,
     })
-    updateLink('.hero-copy > .hero-actions a:last-child', {
-      label: firstSlide.secondaryLabel,
-      href: firstSlide.secondaryHref,
+    updateLink('.hero-video-copy .hero-actions a:last-child', {
+      label: hero.secondaryLabel,
+      href: hero.secondaryHref,
     })
 
-    document.querySelectorAll('.carousel-slide').forEach((slideElement, index) => {
-      const slide = slides[index]
-      if (!slide) return
-
-      setImage(slideElement.querySelector('img'), slide.imageSrc, slide.imageAlt)
-      setText(`.carousel-slide:nth-child(${index + 1}) .carousel-caption h2`, slide.title)
-      setText(`.carousel-slide:nth-child(${index + 1}) .carousel-caption p`, slide.subtitle)
-      updateLink(`.carousel-slide:nth-child(${index + 1}) .hero-actions a:first-child`, {
-        label: slide.primaryLabel,
-        href: slide.primaryHref,
-      })
-      updateLink(`.carousel-slide:nth-child(${index + 1}) .hero-actions a:last-child`, {
-        label: slide.secondaryLabel,
-        href: slide.secondaryHref,
-      })
+    document.querySelectorAll('.hero-video').forEach((video) => {
+      if (hero.posterSrc) video.setAttribute('poster', hero.posterSrc)
+      if (hero.posterAlt) video.setAttribute('aria-label', hero.posterAlt)
+      loadHeroVideo(video, hero.videoSrc || video.dataset.src)
     })
   }
 
@@ -826,15 +833,17 @@
 
     const page = document.body.dataset.page
     if (page === 'home') {
-      if (Array.isArray(pageConfig.carouselSlides)) {
-        applyHomeCarousel(pageConfig.carouselSlides)
+      if (pageConfig.heroVideo) {
+        applyHomeHeroVideo(pageConfig.heroVideo)
       } else {
-        setText('.hero-copy > h1', pageConfig.heroTitle)
-        setText('.hero-copy > p', pageConfig.heroSubtitle)
-        setText('.carousel-slide:first-child .carousel-caption h2', pageConfig.heroTitle)
-        setText('.carousel-slide:first-child .carousel-caption p', pageConfig.heroSubtitle)
-        setText('.carousel-slide:first-child .hero-actions a:first-child', pageConfig.primaryCtaLabel)
-        setText('.carousel-slide:first-child .hero-actions a:last-child', pageConfig.secondaryCtaLabel)
+        applyHomeHeroVideo({
+          title: pageConfig.heroTitle,
+          subtitle: pageConfig.heroSubtitle,
+          primaryLabel: pageConfig.primaryCtaLabel,
+          primaryHref: 'consult.html',
+          secondaryLabel: pageConfig.secondaryCtaLabel,
+          secondaryHref: 'cooperation.html',
+        })
       }
 
       applyHomeFeatureCards(pageConfig.featureCards)
@@ -888,6 +897,9 @@
     applyBranding(sections.branding)
     applyFooter(sections.footer)
     applyPage(sections[pageToSection[page]])
+    if (page === 'home' && !sections.pageHome) {
+      document.querySelectorAll('.hero-video').forEach((video) => loadHeroVideo(video, video.dataset.src))
+    }
     if (page === 'consult') bindConsultSubmissionForms()
   }
 

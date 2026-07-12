@@ -723,6 +723,20 @@ h2 {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.leads-panel td:first-child,
+.leads-panel th:first-child {
+  width: 64px;
+  text-align: center;
+}
+
+.leads-panel input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-blue);
 }
 
 .empty-table {

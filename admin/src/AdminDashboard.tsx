@@ -77,12 +77,12 @@ type FooterMenuItem = {
   newTab: boolean
 }
 
-type HomeCarouselSlide = {
-  id: string
+type HomeHeroVideo = {
   title: string
   subtitle: string
-  imageSrc: string
-  imageAlt: string
+  videoSrc: string
+  posterSrc: string
+  posterAlt: string
   primaryLabel: string
   primaryHref: string
   secondaryLabel: string
@@ -257,7 +257,7 @@ type FieldValue =
   | NewsLeadConfig
   | Array<NavigationMenuItem>
   | Array<FooterMenuItem>
-  | Array<HomeCarouselSlide>
+  | HomeHeroVideo
   | Array<HomeFeatureCard>
   | Array<HomeEntranceItem>
   | Array<HomeMediaCard>
@@ -280,7 +280,7 @@ type EditableField = {
     | 'toggle'
     | 'menu-list'
     | 'footer-menu-list'
-    | 'home-carousel'
+    | 'home-hero-video'
     | 'home-feature-cards'
     | 'home-entrances'
     | 'home-media-cards'
@@ -337,41 +337,17 @@ const defaultFooterMenuItems: Array<FooterMenuItem> = [
   { id: 'video-consult', label: '视频咨询预约', href: 'cooperation.html', newTab: false },
 ]
 
-const defaultHomeCarouselSlides: Array<HomeCarouselSlide> = [
-  {
-    id: 'green-compute',
-    title: '绿电算力基础设施服务商',
-    subtitle: 'GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海',
-    imageSrc: 'assets/materials/hero-chip.png',
-    imageAlt: '绿色算力芯片',
-    primaryLabel: '应用场景咨询',
-    primaryHref: 'consult.html',
-    secondaryLabel: '机房实地考察预约',
-    secondaryHref: 'cooperation.html',
-  },
-  {
-    id: 'enterprise-consult',
-    title: '企业算力方案咨询',
-    subtitle: '面向电商、MCN、广告、工业质检、政务与文旅场景，快速测算成本与部署路径',
-    imageSrc: 'assets/materials/dashboard-panel.png',
-    imageAlt: '算力数据面板',
-    primaryLabel: '立即测算',
-    primaryHref: 'consult.html',
-    secondaryLabel: '查看业务',
-    secondaryHref: 'business.html',
-  },
-  {
-    id: 'server-room',
-    title: '智算机房托管预约',
-    subtitle: '绿电资源、机房租赁、硬件托管、渠道招商与园区项目一站式对接',
-    imageSrc: 'assets/materials/server-room.png',
-    imageAlt: '绿色智算机房',
-    primaryLabel: '预约考察',
-    primaryHref: 'cooperation.html',
-    secondaryLabel: '查看案例',
-    secondaryHref: 'cases.html',
-  },
-]
+const defaultHomeHeroVideo: HomeHeroVideo = {
+  title: '绿电算力基础设施服务商',
+  subtitle: 'GPU算力硬件销售 | 智算机房托管 | 企业AIGC降本 | 跨境算力出海',
+  videoSrc: 'assets/materials/1496.MP4',
+  posterSrc: 'assets/materials/server-room.png',
+  posterAlt: '绿色智算机房',
+  primaryLabel: '应用场景咨询',
+  primaryHref: 'consult.html',
+  secondaryLabel: '机房实地考察预约',
+  secondaryHref: 'cooperation.html',
+}
 
 const defaultHomeFeatureCards: Array<HomeFeatureCard> = [
   { id: 'business', title: '核心业务', subtitle: '硬件 / 托管 / 出海', href: 'business.html', iconClass: 'ri-focus-3-line', highlighted: true },
@@ -901,11 +877,11 @@ function heroField(defaultValue: PageHeroConfig): EditableField {
 
 const homeBlockFields: Array<EditableField> = [
   {
-    id: 'carouselSlides',
-    label: '首屏轮播',
-    type: 'home-carousel',
-    defaultValue: defaultHomeCarouselSlides,
-    hint: '对应前台首页首屏轮播：图片、标题、说明、两个按钮',
+    id: 'heroVideo',
+    label: '首页视频主视觉',
+    type: 'home-hero-video',
+    defaultValue: defaultHomeHeroVideo,
+    hint: '对应首页单个视频首屏：视频路径、封面、标题、说明和两个按钮',
   },
   {
     id: 'featureCards',
@@ -1220,27 +1196,29 @@ function migrateLegacyFooterSection(section?: Record<string, FieldValue>) {
 }
 
 function migrateLegacyHomeSection(section?: Record<string, FieldValue>) {
-  if (!section || Array.isArray(section.carouselSlides)) {
+  if (!section || isRecordValue(section.heroVideo)) {
     return section
   }
 
-  const heroTitle = String(section.heroTitle || defaultHomeCarouselSlides[0].title)
-  const heroSubtitle = String(section.heroSubtitle || defaultHomeCarouselSlides[0].subtitle)
-  const primaryCtaLabel = String(section.primaryCtaLabel || defaultHomeCarouselSlides[0].primaryLabel)
-  const secondaryCtaLabel = String(section.secondaryCtaLabel || defaultHomeCarouselSlides[0].secondaryLabel)
+  const legacySlide = Array.isArray(section.carouselSlides) ? section.carouselSlides[0] as Partial<HomeHeroVideo> | undefined : undefined
+  const heroTitle = String(legacySlide?.title || section.heroTitle || defaultHomeHeroVideo.title)
+  const heroSubtitle = String(legacySlide?.subtitle || section.heroSubtitle || defaultHomeHeroVideo.subtitle)
+  const primaryCtaLabel = String(legacySlide?.primaryLabel || section.primaryCtaLabel || defaultHomeHeroVideo.primaryLabel)
+  const primaryCtaHref = String(legacySlide?.primaryHref || defaultHomeHeroVideo.primaryHref)
+  const secondaryCtaLabel = String(legacySlide?.secondaryLabel || section.secondaryCtaLabel || defaultHomeHeroVideo.secondaryLabel)
+  const secondaryCtaHref = String(legacySlide?.secondaryHref || defaultHomeHeroVideo.secondaryHref)
 
   return {
     ...section,
-    carouselSlides: [
-      {
-        ...defaultHomeCarouselSlides[0],
-        title: heroTitle,
-        subtitle: heroSubtitle,
-        primaryLabel: primaryCtaLabel,
-        secondaryLabel: secondaryCtaLabel,
-      },
-      ...defaultHomeCarouselSlides.slice(1),
-    ],
+    heroVideo: {
+      ...defaultHomeHeroVideo,
+      title: heroTitle,
+      subtitle: heroSubtitle,
+      primaryLabel: primaryCtaLabel,
+      primaryHref: primaryCtaHref,
+      secondaryLabel: secondaryCtaLabel,
+      secondaryHref: secondaryCtaHref,
+    },
     featureCards: defaultHomeFeatureCards,
     businessEntrances: defaultHomeEntrances,
     mediaCards: defaultHomeMediaCards,
@@ -1357,6 +1335,11 @@ function readConsultSubmissions(): Array<ConsultSubmission> {
   }
 }
 
+function writeConsultSubmissions(submissions: Array<ConsultSubmission>) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(CONSULT_SUBMISSIONS_KEY, JSON.stringify(submissions))
+}
+
 function getSubmissionValue(submission: ConsultSubmission, fieldNames: Array<string>) {
   return submission.fields.find((field) => fieldNames.includes(field.name))?.value || '未填写'
 }
@@ -1408,6 +1391,7 @@ export function AdminDashboard() {
   ])
   const [submissionView, setSubmissionView] = useState<'全部' | '方案测算' | '考察预约'>('全部')
   const [submissions, setSubmissions] = useState<Array<ConsultSubmission>>(() => readConsultSubmissions())
+  const [selectedSubmissionIds, setSelectedSubmissionIds] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     const updatedAt = writeFormState(configState)
@@ -1430,8 +1414,54 @@ export function AdminDashboard() {
     }
   }, [])
 
+  useEffect(() => {
+    const activeIds = new Set(submissions.map((submission) => submission.id))
+    setSelectedSubmissionIds((current) => new Set([...current].filter((id) => activeIds.has(id))))
+  }, [submissions])
+
+  const toggleSubmissionSelection = (id: string, checked: boolean) => {
+    setSelectedSubmissionIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const toggleVisibleSubmissionSelection = (ids: Array<string>) => {
+    setSelectedSubmissionIds((current) => {
+      const next = new Set(current)
+      const allSelected = ids.length > 0 && ids.every((id) => next.has(id))
+      ids.forEach((id) => {
+        if (allSelected) next.delete(id)
+        else next.add(id)
+      })
+      return next
+    })
+  }
+
+  const deleteSelectedSubmissions = () => {
+    const nextSubmissions = submissions.filter((submission) => !selectedSubmissionIds.has(submission.id))
+    writeConsultSubmissions(nextSubmissions)
+    setSubmissions(nextSubmissions)
+    setSelectedSubmissionIds(new Set())
+  }
+
   const columns = useMemo<Array<ColumnDef<ConsultSubmission>>>(
     () => [
+      {
+        id: 'select',
+        header: '选择',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <input
+            aria-label={`选择 ${row.original.formTitle}`}
+            checked={selectedSubmissionIds.has(row.original.id)}
+            onChange={(event) => toggleSubmissionSelection(row.original.id, event.target.checked)}
+            type="checkbox"
+          />
+        ),
+      },
       {
         accessorKey: 'formTitle',
         header: '来源表单',
@@ -1463,7 +1493,7 @@ export function AdminDashboard() {
         cell: ({ getValue }) => new Date(getValue<string>()).toLocaleString('zh-CN', { hour12: false }),
       },
     ],
-    [],
+    [selectedSubmissionIds],
   )
 
   const filteredSubmissions = useMemo(
@@ -1582,7 +1612,10 @@ export function AdminDashboard() {
           onConfigChange={updateConfigField}
           table={table}
           submissions={submissions}
+          selectedSubmissionIds={selectedSubmissionIds}
           submissionView={submissionView}
+          onDeleteSelected={deleteSelectedSubmissions}
+          onToggleVisibleSelection={toggleVisibleSubmissionSelection}
           setSubmissionView={setSubmissionView}
         />
       </section>
@@ -1675,7 +1708,10 @@ function ModulePage({
   onConfigChange,
   table,
   submissions,
+  selectedSubmissionIds,
   submissionView,
+  onDeleteSelected,
+  onToggleVisibleSelection,
   setSubmissionView,
 }: {
   activeSection: AdminSection
@@ -1684,7 +1720,10 @@ function ModulePage({
   onConfigChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
   table: ReturnType<typeof useReactTable<ConsultSubmission>>
   submissions: Array<ConsultSubmission>
+  selectedSubmissionIds: Set<string>
   submissionView: '全部' | '方案测算' | '考察预约'
+  onDeleteSelected: () => void
+  onToggleVisibleSelection: (ids: Array<string>) => void
   setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
 }) {
   return (
@@ -1699,6 +1738,9 @@ function ModulePage({
       {activeSection === 'pageConsult' ? (
         <section className="single-table">
           <ConsultSubmissionsTable
+            onDeleteSelected={onDeleteSelected}
+            onToggleVisibleSelection={onToggleVisibleSelection}
+            selectedSubmissionIds={selectedSubmissionIds}
             submissions={submissions}
             submissionView={submissionView}
             setSubmissionView={setSubmissionView}
@@ -1786,12 +1828,12 @@ function ConfigField({
     )
   }
 
-  if (field.type === 'home-carousel') {
+  if (field.type === 'home-hero-video') {
     return (
-      <HomeCarouselEditor
+      <HomeHeroVideoEditor
         field={field}
         onChange={onChange}
-        value={Array.isArray(value) ? (value as Array<HomeCarouselSlide>) : defaultHomeCarouselSlides}
+        value={objectValue(value, field.defaultValue as HomeHeroVideo)}
       />
     )
   }
@@ -2258,61 +2300,57 @@ function FooterMenuEditor({
   )
 }
 
-function HomeCarouselEditor({
+function HomeHeroVideoEditor({
   field,
   value,
   onChange,
 }: {
   field: EditableField
-  value: Array<HomeCarouselSlide>
-  onChange: (value: Array<HomeCarouselSlide>) => void
+  value: HomeHeroVideo
+  onChange: (value: HomeHeroVideo) => void
 }) {
-  const updateSlide = (id: string, patch: Partial<HomeCarouselSlide>) => {
-    onChange(value.map((slide) => (slide.id === id ? { ...slide, ...patch } : slide)))
-  }
-
   return (
     <div className="home-module-editor span-2">
       <ModuleEditorHead field={field} />
-      <div className="home-slide-grid">
-        {value.map((slide, index) => (
-          <article className="home-slide-editor" key={slide.id}>
-            <div className="home-module-kicker">轮播 {index + 1}</div>
-            <label className="menu-cell span-2">
-              <span>标题文案</span>
-              <input value={slide.title} onChange={(event) => updateSlide(slide.id, { title: event.target.value })} />
-            </label>
-            <label className="menu-cell span-2">
-              <span>说明文案</span>
-              <textarea value={slide.subtitle} onChange={(event) => updateSlide(slide.id, { subtitle: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>主按钮</span>
-              <input value={slide.primaryLabel} onChange={(event) => updateSlide(slide.id, { primaryLabel: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>主按钮链接</span>
-              <input value={slide.primaryHref} onChange={(event) => updateSlide(slide.id, { primaryHref: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>次按钮</span>
-              <input value={slide.secondaryLabel} onChange={(event) => updateSlide(slide.id, { secondaryLabel: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>次按钮链接</span>
-              <input value={slide.secondaryHref} onChange={(event) => updateSlide(slide.id, { secondaryHref: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>图片路径</span>
-              <input value={slide.imageSrc} onChange={(event) => updateSlide(slide.id, { imageSrc: event.target.value })} />
-            </label>
-            <label className="menu-cell">
-              <span>图片说明</span>
-              <input value={slide.imageAlt} onChange={(event) => updateSlide(slide.id, { imageAlt: event.target.value })} />
-            </label>
-          </article>
-        ))}
-      </div>
+      <article className="home-slide-editor">
+        <div className="home-module-kicker">单视频首屏</div>
+        <label className="menu-cell span-2">
+          <span>标题文案</span>
+          <input value={value.title} onChange={(event) => onChange({ ...value, title: event.target.value })} />
+        </label>
+        <label className="menu-cell span-2">
+          <span>说明文案</span>
+          <textarea value={value.subtitle} onChange={(event) => onChange({ ...value, subtitle: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>视频路径</span>
+          <input value={value.videoSrc} onChange={(event) => onChange({ ...value, videoSrc: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>加载封面路径</span>
+          <input value={value.posterSrc} onChange={(event) => onChange({ ...value, posterSrc: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>封面说明</span>
+          <input value={value.posterAlt} onChange={(event) => onChange({ ...value, posterAlt: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>主按钮</span>
+          <input value={value.primaryLabel} onChange={(event) => onChange({ ...value, primaryLabel: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>主按钮链接</span>
+          <input value={value.primaryHref} onChange={(event) => onChange({ ...value, primaryHref: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>次按钮</span>
+          <input value={value.secondaryLabel} onChange={(event) => onChange({ ...value, secondaryLabel: event.target.value })} />
+        </label>
+        <label className="menu-cell">
+          <span>次按钮链接</span>
+          <input value={value.secondaryHref} onChange={(event) => onChange({ ...value, secondaryHref: event.target.value })} />
+        </label>
+      </article>
     </div>
   )
 }
@@ -3418,16 +3456,26 @@ function ModuleEditorHead({ action, field }: { action?: ReactNode; field: Editab
 }
 
 function ConsultSubmissionsTable({
+  onDeleteSelected,
+  onToggleVisibleSelection,
+  selectedSubmissionIds,
   submissions,
   table,
   submissionView,
   setSubmissionView,
 }: {
+  onDeleteSelected: () => void
+  onToggleVisibleSelection: (ids: Array<string>) => void
+  selectedSubmissionIds: Set<string>
   submissions: Array<ConsultSubmission>
   table: ReturnType<typeof useReactTable<ConsultSubmission>>
   submissionView: '全部' | '方案测算' | '考察预约'
   setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
 }) {
+  const visibleSubmissionIds = table.getRowModel().rows.map((row) => row.original.id)
+  const allVisibleSelected = visibleSubmissionIds.length > 0
+    && visibleSubmissionIds.every((id) => selectedSubmissionIds.has(id))
+
   return (
     <article className="panel leads-panel">
       <div className="panel-heading">
@@ -3457,6 +3505,22 @@ function ConsultSubmissionsTable({
             type="button"
           >
             下载 CSV
+          </button>
+          <button
+            className="ghost-button"
+            disabled={!visibleSubmissionIds.length}
+            onClick={() => onToggleVisibleSelection(visibleSubmissionIds)}
+            type="button"
+          >
+            {allVisibleSelected ? '取消全选' : '全选当前'}
+          </button>
+          <button
+            className="danger-button"
+            disabled={!selectedSubmissionIds.size}
+            onClick={onDeleteSelected}
+            type="button"
+          >
+            删除已选 {selectedSubmissionIds.size ? `(${selectedSubmissionIds.size})` : ''}
           </button>
         </div>
       </div>

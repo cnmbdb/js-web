@@ -3,6 +3,7 @@
     "admin:build": "npm --prefix admin run build",
     "admin:build:pages": "npm --prefix admin run build:pages",
     "admin:dev": "npm --prefix admin run dev",
+    "site:dev": "npm --prefix admin run dev:site",
     "pages:build": "node scripts/prepare-pages.mjs && npm run admin:build:pages",
     "tanstack": "tanstack"
   },

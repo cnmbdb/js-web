@@ -40,15 +40,18 @@ type AdminSection =
   | 'pageCooperation'
   | 'pageGallery'
 
-type Lead = {
+type ConsultSubmissionField = {
+  name: string
+  label: string
+  value: string
+}
+
+type ConsultSubmission = {
   id: string
-  company: string
-  contact: string
-  intent: string
-  source: string
-  owner: string
-  status: '待跟进' | '已联系' | '方案中' | '已转化'
-  updatedAt: string
+  formId: string
+  formTitle: string
+  submittedAt: string
+  fields: Array<ConsultSubmissionField>
 }
 
 type ModuleConfig = {
@@ -107,6 +110,7 @@ type HomeMediaCard = {
   title: string
   imageSrc: string
   imageAlt: string
+  href: string
 }
 
 type PageHeroConfig = {
@@ -304,6 +308,7 @@ type EditableField = {
 type AdminFormState = Record<AdminSection, Record<string, FieldValue>>
 
 const SITE_CONFIG_KEY = 'suxin-site-config'
+const CONSULT_SUBMISSIONS_KEY = 'suxin-consult-submissions'
 const DEFAULT_LOGO_IMAGE_SRC = 'assets/materials/logo-nav.png'
 
 const pageTargetOptions = [
@@ -379,12 +384,12 @@ const defaultHomeEntrances: Array<HomeEntranceItem> = [
   { id: 'hardware', label: '硬件采购', href: 'business.html', iconClass: 'ri-cpu-line' },
   { id: 'hosting', label: '机房托管', href: 'business.html', iconClass: 'ri-server-line' },
   { id: 'scenario', label: '应用场景', href: 'consult.html', iconClass: 'ri-apps-2-line' },
-  { id: 'partner', label: '招商合作', href: 'cooperation.html', iconClass: 'ri-handshake-line' },
+  { id: 'partner', label: '招商合作', href: 'cooperation.html', iconClass: 'ri-team-line' },
 ]
 
 const defaultHomeMediaCards: Array<HomeMediaCard> = [
-  { id: 'scenario-panel', title: '应用场景', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '算力数据面板' },
-  { id: 'news-panel', title: '资讯中心', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房' },
+  { id: 'scenario-panel', title: '应用场景', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '算力数据面板', href: 'consult.html' },
+  { id: 'news-panel', title: '资讯中心', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房', href: 'news.html' },
 ]
 
 const defaultAboutHero: PageHeroConfig = {
@@ -715,59 +720,6 @@ const pageNav = [
   { label: '招商合作', icon: Handshake, section: 'pageCooperation' },
   { label: '实景图库', icon: Image, section: 'pageGallery' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
-
-const leads: Array<Lead> = [
-  {
-    id: 'L-1028',
-    company: '华东智能装备有限公司',
-    contact: '陈经理',
-    intent: '数字化车间改造',
-    source: '官网咨询',
-    owner: '周彦',
-    status: '待跟进',
-    updatedAt: '09:42',
-  },
-  {
-    id: 'L-1027',
-    company: '宁波精密制造集团',
-    contact: '王总',
-    intent: '工业数据看板',
-    source: '合作页面',
-    owner: '林乔',
-    status: '方案中',
-    updatedAt: '昨天',
-  },
-  {
-    id: 'L-1026',
-    company: '苏州新材料科技',
-    contact: '李工',
-    intent: '产线设备联网',
-    source: '案例详情',
-    owner: '周彦',
-    status: '已联系',
-    updatedAt: '周一',
-  },
-  {
-    id: 'L-1025',
-    company: '南通自动化研究院',
-    contact: '赵主任',
-    intent: '联合解决方案',
-    source: '合作申请',
-    owner: '沈睿',
-    status: '已转化',
-    updatedAt: '07-06',
-  },
-  {
-    id: 'L-1024',
-    company: '上海能源设备厂',
-    contact: '何经理',
-    intent: '质量追溯系统',
-    source: '首页入口',
-    owner: '林乔',
-    status: '待跟进',
-    updatedAt: '07-05',
-  },
-]
 
 const modules: Record<AdminSection, ModuleConfig> = {
   navigation: {
@@ -1393,10 +1345,48 @@ function writeFormState(configState: AdminFormState) {
   return updatedAt
 }
 
-function getStatusClass(status: Lead['status'] | string) {
-  return status === '待跟进' || status === '方案中' || status === '待发布' || status === '待评估'
-    ? 'status-primary'
-    : 'status-neutral'
+function readConsultSubmissions(): Array<ConsultSubmission> {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const saved = window.localStorage.getItem(CONSULT_SUBMISSIONS_KEY)
+    const submissions = saved ? JSON.parse(saved) : []
+    return Array.isArray(submissions) ? submissions as Array<ConsultSubmission> : []
+  } catch {
+    return []
+  }
+}
+
+function getSubmissionValue(submission: ConsultSubmission, fieldNames: Array<string>) {
+  return submission.fields.find((field) => fieldNames.includes(field.name))?.value || '未填写'
+}
+
+function getSubmissionSummary(submission: ConsultSubmission) {
+  return submission.fields
+    .filter((field) => !['name', 'phone', 'contact'].includes(field.name))
+    .map((field) => `${field.label}: ${field.value}`)
+    .join(' · ')
+}
+
+function downloadConsultSubmissions(submissions: Array<ConsultSubmission>) {
+  const escapeCsv = (value: string) => `"${value.replaceAll('"', '""')}"`
+  const rows = [
+    ['提交时间', '来源表单', '姓名 / 联系方式', '电话', '需求信息'],
+    ...submissions.map((submission) => [
+      new Date(submission.submittedAt).toLocaleString('zh-CN', { hour12: false }),
+      submission.formTitle,
+      getSubmissionValue(submission, ['name', 'contact']),
+      getSubmissionValue(submission, ['phone', 'contact']),
+      getSubmissionSummary(submission),
+    ]),
+  ]
+  const csv = `\ufeff${rows.map((row) => row.map((cell) => escapeCsv(cell)).join(',')).join('\n')}`
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '应用场景用户提交信息.csv'
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function isTopNavActive(section: AdminSection, activeSection: AdminSection) {
@@ -1414,9 +1404,10 @@ export function AdminDashboard() {
   const [configState, setConfigState] = useState<AdminFormState>(() => readFormState())
   const [lastSavedAt, setLastSavedAt] = useState('')
   const [sorting, setSorting] = useState<SortingState>([
-    { id: 'updatedAt', desc: false },
+    { id: 'submittedAt', desc: true },
   ])
-  const [leadView, setLeadView] = useState<'全部' | '待跟进' | '方案中'>('全部')
+  const [submissionView, setSubmissionView] = useState<'全部' | '方案测算' | '考察预约'>('全部')
+  const [submissions, setSubmissions] = useState<Array<ConsultSubmission>>(() => readConsultSubmissions())
 
   useEffect(() => {
     const updatedAt = writeFormState(configState)
@@ -1425,54 +1416,67 @@ export function AdminDashboard() {
     }
   }, [configState])
 
-  const columns = useMemo<Array<ColumnDef<Lead>>>(
+  useEffect(() => {
+    const refreshSubmissions = () => setSubmissions(readConsultSubmissions())
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === CONSULT_SUBMISSIONS_KEY) refreshSubmissions()
+    }
+
+    window.addEventListener('focus', refreshSubmissions)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener('focus', refreshSubmissions)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
+  const columns = useMemo<Array<ColumnDef<ConsultSubmission>>>(
     () => [
       {
-        accessorKey: 'company',
-        header: '客户',
+        accessorKey: 'formTitle',
+        header: '来源表单',
         cell: ({ row }) => (
           <div className="customer-cell">
-            <strong>{row.original.company}</strong>
-            <span>{row.original.id} · {row.original.contact}</span>
+            <strong>{row.original.formTitle}</strong>
+            <span>{row.original.id}</span>
           </div>
         ),
       },
       {
-        accessorKey: 'intent',
-        header: '需求',
+        id: 'contact',
+        header: '姓名 / 联系方式',
+        cell: ({ row }) => getSubmissionValue(row.original, ['name', 'contact']),
       },
       {
-        accessorKey: 'source',
-        header: '来源',
+        id: 'phone',
+        header: '电话',
+        cell: ({ row }) => getSubmissionValue(row.original, ['phone', 'contact']),
       },
       {
-        accessorKey: 'owner',
-        header: '负责人',
+        id: 'details',
+        header: '需求信息',
+        cell: ({ row }) => getSubmissionSummary(row.original),
       },
       {
-        accessorKey: 'status',
-        header: '状态',
-        cell: ({ getValue }) => (
-          <span className={`status ${getStatusClass(getValue<Lead['status']>())}`}>
-            {getValue<string>()}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'updatedAt',
+        accessorKey: 'submittedAt',
         header: '更新时间',
+        cell: ({ getValue }) => new Date(getValue<string>()).toLocaleString('zh-CN', { hour12: false }),
       },
     ],
     [],
   )
 
-  const filteredLeads = useMemo(
-    () => leads.filter((lead) => leadView === '全部' || lead.status === leadView),
-    [leadView],
+  const filteredSubmissions = useMemo(
+    () => submissions.filter((submission) => {
+      if (submissionView === '全部') return true
+      if (submissionView === '方案测算') return submission.formId === 'scenario-estimate'
+      return submission.formId === 'room-visit'
+    }),
+    [submissionView, submissions],
   )
 
   const table = useReactTable({
-    data: filteredLeads,
+    data: filteredSubmissions,
     columns,
     state: {
       globalFilter,
@@ -1577,8 +1581,9 @@ export function AdminDashboard() {
           lastSavedAt={lastSavedAt}
           onConfigChange={updateConfigField}
           table={table}
-          leadView={leadView}
-          setLeadView={setLeadView}
+          submissions={submissions}
+          submissionView={submissionView}
+          setSubmissionView={setSubmissionView}
         />
       </section>
     </main>
@@ -1669,16 +1674,18 @@ function ModulePage({
   lastSavedAt,
   onConfigChange,
   table,
-  leadView,
-  setLeadView,
+  submissions,
+  submissionView,
+  setSubmissionView,
 }: {
   activeSection: AdminSection
   formValues: Record<string, FieldValue>
   lastSavedAt: string
   onConfigChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
-  table: ReturnType<typeof useReactTable<Lead>>
-  leadView: '全部' | '待跟进' | '方案中'
-  setLeadView: (view: '全部' | '待跟进' | '方案中') => void
+  table: ReturnType<typeof useReactTable<ConsultSubmission>>
+  submissions: Array<ConsultSubmission>
+  submissionView: '全部' | '方案测算' | '考察预约'
+  setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
 }) {
   return (
     <>
@@ -1691,7 +1698,12 @@ function ModulePage({
 
       {activeSection === 'pageConsult' ? (
         <section className="single-table">
-          <LeadTable table={table} leadView={leadView} setLeadView={setLeadView} />
+          <ConsultSubmissionsTable
+            submissions={submissions}
+            submissionView={submissionView}
+            setSubmissionView={setSubmissionView}
+            table={table}
+          />
         </section>
       ) : null}
     </>
@@ -2426,6 +2438,10 @@ function HomeMediaCardsEditor({
             <label className="menu-cell">
               <span>图片说明</span>
               <input value={card.imageAlt} onChange={(event) => updateCard(card.id, { imageAlt: event.target.value })} />
+            </label>
+            <label className="menu-cell">
+              <span>点击跳转</span>
+              <input value={card.href} onChange={(event) => updateCard(card.id, { href: event.target.value })} />
             </label>
           </article>
         ))}
@@ -3401,34 +3417,47 @@ function ModuleEditorHead({ action, field }: { action?: ReactNode; field: Editab
   )
 }
 
-function LeadTable({
+function ConsultSubmissionsTable({
+  submissions,
   table,
-  leadView,
-  setLeadView,
+  submissionView,
+  setSubmissionView,
 }: {
-  table: ReturnType<typeof useReactTable<Lead>>
-  leadView: '全部' | '待跟进' | '方案中'
-  setLeadView: (view: '全部' | '待跟进' | '方案中') => void
+  submissions: Array<ConsultSubmission>
+  table: ReturnType<typeof useReactTable<ConsultSubmission>>
+  submissionView: '全部' | '方案测算' | '考察预约'
+  setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
 }) {
   return (
     <article className="panel leads-panel">
       <div className="panel-heading">
         <div>
-          <h2>咨询线索</h2>
-          <p>使用 TanStack Table 管理筛选、排序和渲染状态</p>
+          <h2>用户提交信息</h2>
+          <p>前台应用场景表单提交后会自动显示在这里</p>
         </div>
-        <div className="segmented" role="tablist" aria-label="线索筛选">
-          {(['全部', '待跟进', '方案中'] as const).map((item) => (
-            <button
-              aria-selected={leadView === item}
-              className={leadView === item ? 'selected' : ''}
-              key={item}
-              onClick={() => setLeadView(item)}
-              role="tab"
-            >
-              {item}
-            </button>
-          ))}
+        <div className="submission-table-actions">
+          <div className="segmented" role="tablist" aria-label="提交信息筛选">
+            {(['全部', '方案测算', '考察预约'] as const).map((item) => (
+              <button
+                aria-selected={submissionView === item}
+                className={submissionView === item ? 'selected' : ''}
+                key={item}
+                onClick={() => setSubmissionView(item)}
+                role="tab"
+                type="button"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <button
+            className="ghost-button"
+            disabled={!submissions.length}
+            onClick={() => downloadConsultSubmissions(submissions)}
+            type="button"
+          >
+            下载 CSV
+          </button>
         </div>
       </div>
 
@@ -3456,7 +3485,7 @@ function LeadTable({
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
+            {table.getRowModel().rows.length ? table.getRowModel().rows.map((row) => (
               <tr key={row.id}>
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id}>
@@ -3464,7 +3493,11 @@ function LeadTable({
                   </td>
                 ))}
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td className="empty-table" colSpan={5}>暂时没有用户提交信息</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

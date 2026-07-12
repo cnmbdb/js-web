@@ -1,5 +1,6 @@
 (function () {
   const CONFIG_KEY = 'suxin-site-config'
+  const CONSULT_SUBMISSIONS_KEY = 'suxin-consult-submissions'
   const pageToSection = {
     home: 'pageHome',
     about: 'pageAbout',
@@ -133,9 +134,10 @@
     return createTextElement('h2', 'section-title', text || '未命名区块')
   }
 
-  function createFormPanel(panel, panelClass, buttonClass) {
+  function createFormPanel(panel, panelClass, buttonClass, interactive) {
     const form = document.createElement('form')
     form.className = panelClass
+    if (interactive) form.dataset.consultForm = panel.id || 'consult-form'
 
     const title = createTextElement('h2', '', panel.title || '未命名表单')
     if (panel.titleIconClass) {
@@ -147,12 +149,26 @@
     const grid = document.createElement('div')
     grid.className = 'form-grid'
     ;(panel.fields || []).forEach((field) => {
+      const inputId = `${panel.id || 'consult'}-${field.id || 'field'}`
       const label = createTextElement('label', '', field.label || '字段')
-      const inputLike = createTextElement('div', 'field', field.placeholder || '输入内容')
+      label.htmlFor = inputId
+      const inputLike = interactive ? document.createElement('input') : createTextElement('div', 'field', field.placeholder || '输入内容')
+      if (interactive) {
+        inputLike.className = 'field form-input'
+        inputLike.id = inputId
+        inputLike.name = field.id || inputId
+        inputLike.type = /phone|contact/i.test(field.id || '') ? 'tel' : 'text'
+        inputLike.placeholder = field.placeholder || '请输入'
+        inputLike.required = true
+      }
       if (field.wide) inputLike.style.gridColumn = 'span 3'
       if (field.suffixIconClass) {
-        inputLike.append(document.createTextNode(' '))
-        inputLike.appendChild(createIcon(field.suffixIconClass))
+        if (interactive) {
+          inputLike.dataset.suffixIcon = field.suffixIconClass
+        } else {
+          inputLike.append(document.createTextNode(' '))
+          inputLike.appendChild(createIcon(field.suffixIconClass))
+        }
       }
       grid.append(label, inputLike)
     })
@@ -161,7 +177,7 @@
     buttonRow.className = 'btn-row'
     const button = document.createElement('button')
     button.className = buttonClass
-    button.type = 'button'
+    button.type = interactive ? 'submit' : 'button'
     button.textContent = panel.buttonLabel || '提交'
     buttonRow.appendChild(button)
     grid.appendChild(buttonRow)
@@ -169,14 +185,67 @@
     return form
   }
 
-  function applyFormPanels(selector, panels, panelClass, buttonClass) {
+  function applyFormPanels(selector, panels, panelClass, buttonClass, interactive) {
     if (!Array.isArray(panels) || !panels.length) return
 
     document.querySelectorAll(selector).forEach((container) => {
       container.innerHTML = ''
       panels.forEach((panel) => {
         if (!panel) return
-        container.appendChild(createFormPanel(panel, panelClass, buttonClass))
+        container.appendChild(createFormPanel(panel, panelClass, buttonClass, interactive))
+      })
+    })
+  }
+
+  function readConsultSubmissions() {
+    try {
+      const saved = window.localStorage.getItem(CONSULT_SUBMISSIONS_KEY)
+      const submissions = saved ? JSON.parse(saved) : []
+      return Array.isArray(submissions) ? submissions : []
+    } catch {
+      return []
+    }
+  }
+
+  function saveConsultSubmission(submission) {
+    const submissions = readConsultSubmissions()
+    submissions.unshift(submission)
+    window.localStorage.setItem(CONSULT_SUBMISSIONS_KEY, JSON.stringify(submissions))
+  }
+
+  function bindConsultSubmissionForms() {
+    document.querySelectorAll('.forms form').forEach((form, index) => {
+      if (form.dataset.submissionBound === 'true') return
+      form.dataset.submissionBound = 'true'
+      form.dataset.consultForm = form.dataset.consultForm || (index === 0 ? 'scenario-estimate' : 'room-visit')
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        const fields = Array.from(form.querySelectorAll('input, select, textarea')).map((input) => {
+          const label = input.id ? form.querySelector(`label[for="${input.id}"]`) : null
+          return {
+            name: input.name || input.id || 'field',
+            label: label ? label.textContent.trim() : input.name || '字段',
+            value: input.value.trim(),
+          }
+        }).filter((field) => field.value)
+
+        saveConsultSubmission({
+          id: `consult-${Date.now()}`,
+          formId: form.dataset.consultForm,
+          formTitle: form.querySelector('h2')?.textContent.trim() || '应用场景咨询',
+          submittedAt: new Date().toISOString(),
+          fields,
+        })
+
+        form.reset()
+        let feedback = form.querySelector('.form-feedback')
+        if (!feedback) {
+          feedback = createTextElement('p', 'form-feedback', '')
+          feedback.setAttribute('role', 'status')
+          form.appendChild(feedback)
+        }
+        feedback.textContent = '提交成功，我们会尽快与您联系。'
       })
     })
   }
@@ -265,7 +334,7 @@
         if (!item) return
         const link = document.createElement('a')
         link.href = item.href || 'index.html'
-        link.appendChild(createIcon(item.iconClass))
+        link.appendChild(createIcon(item.iconClass === 'ri-handshake-line' ? 'ri-team-line' : item.iconClass))
         const label = document.createElement('span')
         label.textContent = item.label || '未命名入口'
         link.appendChild(label)
@@ -283,7 +352,21 @@
       if (!card) return
       setText(`${selector} .panel-title`, card.title)
       document.querySelectorAll(selector).forEach((element) => {
-        setImage(element.querySelector('img'), card.imageSrc, card.imageAlt)
+        const image = element.querySelector('img')
+        setImage(image, card.imageSrc, card.imageAlt)
+
+        let link = element.querySelector('.panel-media-link')
+        if (!link && image) {
+          link = document.createElement('a')
+          link.className = 'panel-media-link'
+          image.replaceWith(link)
+          link.appendChild(image)
+        }
+
+        if (link) {
+          link.href = card.href || 'index.html'
+          link.setAttribute('aria-label', `查看${card.title || '内容'}`)
+        }
       })
     })
   }
@@ -410,7 +493,8 @@
       })
     }
 
-    applyFormPanels('.forms', pageConfig.formPanels, 'panel', 'btn')
+    applyFormPanels('.forms', pageConfig.formPanels, 'panel', 'btn', true)
+    bindConsultSubmissionForms()
     applyDownloadSection('main.wrap > section.panel', pageConfig.downloadSection, 'downloads')
   }
 
@@ -544,7 +628,7 @@
       })
     }
 
-    applyFormPanels('.forms', pageConfig.formPanels, 'form-panel', 'primary-btn')
+    applyFormPanels('.forms', pageConfig.formPanels, 'form-panel', 'primary-btn', false)
     applyDownloadSection('.download-panel', pageConfig.downloadSection, 'download-grid')
   }
 
@@ -804,6 +888,7 @@
     applyBranding(sections.branding)
     applyFooter(sections.footer)
     applyPage(sections[pageToSection[page]])
+    if (page === 'consult') bindConsultSubmissionForms()
   }
 
   window.SuxinSiteConfig = { apply: applyConfig, key: CONFIG_KEY }

@@ -719,6 +719,18 @@ h2 {
   color: #111111;
 }
 
+.submission-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.empty-table {
+  color: var(--muted);
+  padding: 30px 18px;
+  text-align: center;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -1639,5 +1651,14 @@ tbody tr:last-child td {
   .panel-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .submission-table-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .submission-table-actions .ghost-button {
+    width: 100%;
   }
 }

@@ -56,6 +56,18 @@ To build this application for production:
 npm run build
 ```
 
+## Supabase Content Publishing
+
+The admin uses Supabase project `js-web` for authentication, published site configuration, and image storage.
+
+On the first visit, choose `首次使用？创建管理员`, register with an email address, and complete email verification if prompted. The first authenticated account becomes the site administrator; later accounts cannot claim publishing access.
+
+Content edits stay in the current admin draft until `保存并发布` is pressed. Published configuration is read by every static frontend page directly from Supabase, so content changes do not require another GitHub Pages deployment.
+
+Image controls upload JPEG, PNG, WebP, GIF, or AVIF files up to 10MB to the public `site-media` bucket. Only the site administrator can upload, update, or delete objects. The returned public URL is placed into the draft automatically and becomes visible to visitors after publishing.
+
+Database and Storage policies are versioned in `../supabase/migrations`.
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:

@@ -1,6 +1,8 @@
 (function () {
-  const CONFIG_KEY = 'suxin-site-config'
+  const SUPABASE_URL = 'https://xyfgzgcqeasfcfgkzsyd.supabase.co'
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_yoLWgA8eBMu6mjVgXfbP1g_VZW8PveY'
   const CONSULT_SUBMISSIONS_KEY = 'suxin-consult-submissions'
+  let configPromise = null
   const pageToSection = {
     home: 'pageHome',
     about: 'pageAbout',
@@ -22,13 +24,25 @@
     gallery: 'galleryLabel',
   }
 
-  function readConfig() {
-    try {
-      const saved = window.localStorage.getItem(CONFIG_KEY)
-      return saved ? JSON.parse(saved).sections || {} : {}
-    } catch {
-      return {}
+  async function readConfig() {
+    if (!configPromise) {
+      configPromise = fetch(`${SUPABASE_URL}/rest/v1/site_configs?id=eq.main&select=config`, {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`)
+          return response.json()
+        })
+        .then((rows) => rows[0]?.config || {})
+        .catch((error) => {
+          console.warn('无法读取已发布站点配置，将使用页面默认内容。', error)
+          return {}
+        })
     }
+
+    return configPromise
   }
 
   function setText(selector, value) {
@@ -895,8 +909,8 @@
     applyHero(pageConfig)
   }
 
-  function applyConfig() {
-    const sections = readConfig()
+  async function applyConfig() {
+    const sections = await readConfig()
     const page = document.body.dataset.page
     applyNavigation(sections.navigation)
     applyBranding(sections.branding)
@@ -908,6 +922,14 @@
     if (page === 'consult') bindConsultSubmissionForms()
   }
 
-  window.SuxinSiteConfig = { apply: applyConfig, key: CONFIG_KEY }
-  document.addEventListener('DOMContentLoaded', applyConfig)
+  window.SuxinSiteConfig = {
+    apply: applyConfig,
+    refresh: function () {
+      configPromise = null
+      return applyConfig()
+    },
+  }
+  document.addEventListener('DOMContentLoaded', function () {
+    void applyConfig()
+  })
 })()

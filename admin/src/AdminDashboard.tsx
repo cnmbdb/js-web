@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, type ReactNode, useEffect, useId, useMemo, useState } from 'react'
 import {
   type ColumnDef,
   type SortingState,
@@ -9,7 +9,6 @@ import {
   useReactTable,
 } from '@tanstack/react-table'
 import {
-  Bell,
   BookOpen,
   BriefcaseBusiness,
   ChevronDown,
@@ -20,12 +19,17 @@ import {
   Home,
   Image,
   LayoutDashboard,
+  LoaderCircle,
+  LogOut,
   MessageSquareText,
-  Palette,
+  Save,
   Search,
   SquarePen,
+  Upload,
   UsersRound,
 } from 'lucide-react'
+
+import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage } from './supabase'
 
 type AdminSection =
   | 'navigation'
@@ -277,6 +281,7 @@ type EditableField = {
   label: string
   type:
     | 'text'
+    | 'image'
     | 'textarea'
     | 'select'
     | 'toggle'
@@ -1104,7 +1109,7 @@ const editableSections: Record<AdminSection, { title: string; fields: Array<Edit
       {
         id: 'logoImageSrc',
         label: 'Logo 图片链接 / 文件路径',
-        type: 'text',
+        type: 'image',
         defaultValue: DEFAULT_LOGO_IMAGE_SRC,
         hint: `当前项目 Logo：${DEFAULT_LOGO_IMAGE_SRC}；也可替换为 https://... 外链`,
       },
@@ -1257,74 +1262,63 @@ function migrateLegacyPageSection(section: Record<string, FieldValue> | undefine
 }
 
 function readFormState(): AdminFormState {
-  const fallback = buildDefaultFormState()
-
   if (typeof window === 'undefined') {
-    return fallback
+    return buildDefaultFormState()
   }
 
   try {
     const saved = window.localStorage.getItem(SITE_CONFIG_KEY)
     if (!saved) {
-      return fallback
+      return buildDefaultFormState()
     }
 
     const parsed = JSON.parse(saved) as {
       sections?: Partial<AdminFormState> & { blocks?: Record<string, FieldValue> }
     }
-    const savedSections = parsed.sections ?? {}
-    const savedBranding = savedSections.branding
-    if (savedBranding && savedBranding.logoImageSrc === '') {
-      savedBranding.logoImageSrc = DEFAULT_LOGO_IMAGE_SRC
-    }
-    savedSections.footer = migrateLegacyFooterSection(savedSections.footer as Record<string, FieldValue>)
-    savedSections.pageHome = migrateLegacyHomeSection(savedSections.pageHome as Record<string, FieldValue>)
-    ;([
-      'pageAbout',
-      'pageBusiness',
-      'pageConsult',
-      'pageCases',
-      'pageNews',
-      'pageCooperation',
-      'pageGallery',
-    ] as Array<AdminSection>).forEach((section) => {
-      savedSections[section] = migrateLegacyPageSection(
-        savedSections[section] as Record<string, FieldValue> | undefined,
-        section,
-      )
-    })
-
-    return Object.fromEntries(
-      Object.entries(fallback).map(([section, values]) => [
-        section,
-        {
-          ...values,
-          ...(section === 'pageHome' ? (savedSections.blocks ?? {}) : {}),
-          ...(savedSections[section as AdminSection] ?? {}),
-        },
-      ]),
-    ) as AdminFormState
+    return mergeFormState(parsed.sections ?? {})
   } catch {
-    return fallback
+    return buildDefaultFormState()
   }
 }
 
-function writeFormState(configState: AdminFormState) {
-  if (typeof window === 'undefined') {
-    return ''
+function mergeFormState(
+  sourceSections: Partial<AdminFormState> & { blocks?: Record<string, FieldValue> },
+): AdminFormState {
+  const fallback = buildDefaultFormState()
+  const savedSections = { ...sourceSections }
+  const savedBranding = savedSections.branding ? { ...savedSections.branding } : undefined
+  if (savedBranding?.logoImageSrc === '') {
+    savedBranding.logoImageSrc = DEFAULT_LOGO_IMAGE_SRC
   }
+  if (savedBranding) savedSections.branding = savedBranding
 
-  const updatedAt = new Date().toISOString()
-  window.localStorage.setItem(
-    SITE_CONFIG_KEY,
-    JSON.stringify({
-      version: 1,
-      updatedAt,
-      sections: configState,
-    }),
-  )
+  savedSections.footer = migrateLegacyFooterSection(savedSections.footer as Record<string, FieldValue>)
+  savedSections.pageHome = migrateLegacyHomeSection(savedSections.pageHome as Record<string, FieldValue>)
+  ;([
+    'pageAbout',
+    'pageBusiness',
+    'pageConsult',
+    'pageCases',
+    'pageNews',
+    'pageCooperation',
+    'pageGallery',
+  ] as Array<AdminSection>).forEach((section) => {
+    savedSections[section] = migrateLegacyPageSection(
+      savedSections[section] as Record<string, FieldValue> | undefined,
+      section,
+    )
+  })
 
-  return updatedAt
+  return Object.fromEntries(
+    Object.entries(fallback).map(([section, values]) => [
+      section,
+      {
+        ...values,
+        ...(section === 'pageHome' ? (savedSections.blocks ?? {}) : {}),
+        ...(savedSections[section as AdminSection] ?? {}),
+      },
+    ]),
+  ) as AdminFormState
 }
 
 function readConsultSubmissions(): Array<ConsultSubmission> {
@@ -1384,12 +1378,24 @@ function isTopNavActive(section: AdminSection, activeSection: AdminSection) {
   return activeSection === section
 }
 
-export function AdminDashboard() {
+export function AdminDashboard({
+  onSignOut,
+  userEmail,
+  userId,
+}: {
+  onSignOut: () => void | Promise<void>
+  userEmail: string
+  userId: string
+}) {
   const [activeSection, setActiveSection] = useState<AdminSection>('navigation')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [globalFilter, setGlobalFilter] = useState('')
   const [configState, setConfigState] = useState<AdminFormState>(() => readFormState())
-  const [lastSavedAt, setLastSavedAt] = useState('')
+  const [isDirty, setIsDirty] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [isRemoteLoading, setIsRemoteLoading] = useState(true)
+  const [publishedAt, setPublishedAt] = useState('')
+  const [publishError, setPublishError] = useState('')
   const [sorting, setSorting] = useState<SortingState>([
     { id: 'submittedAt', desc: true },
   ])
@@ -1398,11 +1404,29 @@ export function AdminDashboard() {
   const [selectedSubmissionIds, setSelectedSubmissionIds] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
-    const updatedAt = writeFormState(configState)
-    if (updatedAt) {
-      setLastSavedAt(new Date(updatedAt).toLocaleTimeString('zh-CN', { hour12: false }))
+    let active = true
+
+    loadPublishedSiteConfig()
+      .then(({ sections, publishedAt: nextPublishedAt }) => {
+        if (!active) return
+        if (Object.keys(sections).length > 0) {
+          setConfigState(mergeFormState(sections as Partial<AdminFormState>))
+        } else {
+          setIsDirty(true)
+        }
+        setPublishedAt(nextPublishedAt)
+      })
+      .catch((error: Error) => {
+        if (active) setPublishError(`读取已发布配置失败：${error.message}`)
+      })
+      .finally(() => {
+        if (active) setIsRemoteLoading(false)
+      })
+
+    return () => {
+      active = false
     }
-  }, [configState])
+  }, [])
 
   useEffect(() => {
     const refreshSubmissions = () => setSubmissions(readConsultSubmissions())
@@ -1536,6 +1560,23 @@ export function AdminDashboard() {
         [fieldId]: value,
       },
     }))
+    setIsDirty(true)
+    setPublishError('')
+  }
+
+  const publishConfig = async () => {
+    setIsPublishing(true)
+    setPublishError('')
+
+    try {
+      const nextPublishedAt = await publishSiteConfig(configState, userId)
+      setPublishedAt(nextPublishedAt)
+      setIsDirty(false)
+    } catch (error) {
+      setPublishError(`发布失败：${error instanceof Error ? error.message : '未知错误'}`)
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -1573,9 +1614,11 @@ export function AdminDashboard() {
           <kbd>⌘ K</kbd>
         </label>
         <div className="global-actions">
-          <Bell size={20} />
-          <Palette size={20} />
-          <span className="avatar">S</span>
+          <span className="admin-identity">{userEmail}</span>
+          <span className="avatar">{userEmail.slice(0, 1).toUpperCase()}</span>
+          <button aria-label="退出登录" className="icon-button" onClick={onSignOut} title="退出登录" type="button">
+            <LogOut size={18} />
+          </button>
         </div>
       </header>
 
@@ -1612,8 +1655,13 @@ export function AdminDashboard() {
         <ModulePage
           activeSection={activeSection}
           formValues={configState[activeSection]}
-          lastSavedAt={lastSavedAt}
+          isDirty={isDirty}
+          isPublishing={isPublishing}
+          isRemoteLoading={isRemoteLoading}
           onConfigChange={updateConfigField}
+          onPublish={publishConfig}
+          publishedAt={publishedAt}
+          publishError={publishError}
           table={table}
           submissions={submissions}
           selectedSubmissionIds={selectedSubmissionIds}
@@ -1708,8 +1756,13 @@ function SidebarNav({
 function ModulePage({
   activeSection,
   formValues,
-  lastSavedAt,
+  isDirty,
+  isPublishing,
+  isRemoteLoading,
   onConfigChange,
+  onPublish,
+  publishedAt,
+  publishError,
   table,
   submissions,
   selectedSubmissionIds,
@@ -1720,8 +1773,13 @@ function ModulePage({
 }: {
   activeSection: AdminSection
   formValues: Record<string, FieldValue>
-  lastSavedAt: string
+  isDirty: boolean
+  isPublishing: boolean
+  isRemoteLoading: boolean
   onConfigChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
+  onPublish: () => void
+  publishedAt: string
+  publishError: string
   table: ReturnType<typeof useReactTable<ConsultSubmission>>
   submissions: Array<ConsultSubmission>
   selectedSubmissionIds: Set<string>
@@ -1735,8 +1793,13 @@ function ModulePage({
       <ConfigEditor
         activeSection={activeSection}
         formValues={formValues}
-        lastSavedAt={lastSavedAt}
+        isDirty={isDirty}
+        isPublishing={isPublishing}
+        isRemoteLoading={isRemoteLoading}
         onChange={onConfigChange}
+        onPublish={onPublish}
+        publishedAt={publishedAt}
+        publishError={publishError}
       />
 
       {activeSection === 'pageConsult' ? (
@@ -1759,15 +1822,28 @@ function ModulePage({
 function ConfigEditor({
   activeSection,
   formValues,
-  lastSavedAt,
+  isDirty,
+  isPublishing,
+  isRemoteLoading,
   onChange,
+  onPublish,
+  publishedAt,
+  publishError,
 }: {
   activeSection: AdminSection
   formValues: Record<string, FieldValue>
-  lastSavedAt: string
+  isDirty: boolean
+  isPublishing: boolean
+  isRemoteLoading: boolean
   onChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
+  onPublish: () => void
+  publishedAt: string
+  publishError: string
 }) {
   const editableConfig = editableSections[activeSection]
+  const publishedLabel = publishedAt
+    ? new Date(publishedAt).toLocaleString('zh-CN', { hour12: false })
+    : '尚未发布'
 
   return (
     <section className="config-layout" aria-label={`${editableConfig.title} 表单`}>
@@ -1775,10 +1851,25 @@ function ConfigEditor({
         <div className="panel-heading">
           <div>
             <h2>{editableConfig.title}</h2>
-            <p>这些字段会写入前台配置，当前浏览器访问前台页面时会直接读取</p>
+            <p>修改内容仅作为草稿，点击保存并发布后才会同步到所有前台页面</p>
           </div>
-          <span className="save-pill">已自动保存 {lastSavedAt || '刚刚'}</span>
+          <div className="config-publish-actions">
+            <span className={isDirty ? 'save-pill dirty' : 'save-pill'}>
+              {isRemoteLoading ? '正在读取线上配置' : isDirty ? '有未发布修改' : `已发布 ${publishedLabel}`}
+            </span>
+            <button
+              className="primary-button publish-button"
+              disabled={!isDirty || isPublishing || isRemoteLoading}
+              onClick={onPublish}
+              type="button"
+            >
+              {isPublishing ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}
+              {isPublishing ? '发布中' : '保存并发布'}
+            </button>
+          </div>
         </div>
+
+        {publishError ? <p className="publish-error" role="alert">{publishError}</p> : null}
 
         <div className="config-form">
           {editableConfig.fields.map((field) => (
@@ -1803,6 +1894,83 @@ function objectValue<T extends object>(value: FieldValue, fallback: T): T {
   return isRecordValue(value) ? ({ ...fallback, ...value } as T) : fallback
 }
 
+function resolveImagePreviewUrl(value: string) {
+  if (!value || /^(https?:|data:|blob:)/i.test(value) || typeof window === 'undefined') return value
+
+  const cleanPath = value.replace(/^\.?\//, '')
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return `https://cnmbdb.github.io/js-web/${cleanPath}`
+  }
+
+  return new URL(`../${cleanPath}`, window.location.href).href
+}
+
+function ImageUploadField({
+  className = '',
+  label,
+  onChange,
+  value,
+}: {
+  className?: string
+  label: string
+  onChange: (value: string) => void
+  value: string
+}) {
+  const inputId = useId()
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
+
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setIsUploading(true)
+    setUploadError('')
+    try {
+      onChange(await uploadSiteImage(file))
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : '上传失败')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  return (
+    <div className={`image-upload-field ${className}`.trim()}>
+      <span className="image-upload-label">{label}</span>
+      <div className="image-upload-body">
+        <div className="image-preview">
+          {value ? <img alt={`${label}预览`} src={resolveImagePreviewUrl(value)} /> : <Image aria-hidden="true" size={22} />}
+        </div>
+        <div className="image-upload-controls">
+          <label className={isUploading ? 'image-upload-button disabled' : 'image-upload-button'} htmlFor={inputId}>
+            {isUploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+            {isUploading ? '上传中' : '选择图片'}
+          </label>
+          <input
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            className="image-file-input"
+            disabled={isUploading}
+            id={inputId}
+            onChange={upload}
+            type="file"
+          />
+          <label className="image-url-field">
+            <span>图片 URL / 项目路径</span>
+            <input
+              onChange={(event) => onChange(event.target.value)}
+              placeholder="上传后自动回填，也可粘贴 https://..."
+              value={value}
+            />
+          </label>
+        </div>
+      </div>
+      {uploadError ? <small className="image-upload-error" role="alert">{uploadError}</small> : null}
+    </div>
+  )
+}
+
 function ConfigField({
   field,
   value,
@@ -1812,6 +1980,17 @@ function ConfigField({
   value: FieldValue
   onChange: (value: FieldValue) => void
 }) {
+  if (field.type === 'image') {
+    return (
+      <ImageUploadField
+        className="span-2"
+        label={field.label}
+        onChange={onChange}
+        value={String(value || '')}
+      />
+    )
+  }
+
   if (field.type === 'menu-list') {
     return (
       <NavigationMenuEditor
@@ -2330,10 +2509,11 @@ function HomeHeroVideoEditor({
           <span>视频路径</span>
           <input value={value.videoSrc} onChange={(event) => onChange({ ...value, videoSrc: event.target.value })} />
         </label>
-        <label className="menu-cell">
-          <span>加载封面路径</span>
-          <input value={value.posterSrc} onChange={(event) => onChange({ ...value, posterSrc: event.target.value })} />
-        </label>
+        <ImageUploadField
+          label="加载封面"
+          onChange={(posterSrc) => onChange({ ...value, posterSrc })}
+          value={value.posterSrc}
+        />
         <label className="menu-cell">
           <span>封面说明</span>
           <input value={value.posterAlt} onChange={(event) => onChange({ ...value, posterAlt: event.target.value })} />
@@ -2481,10 +2661,11 @@ function HomeMediaCardsEditor({
               <span>区块标题</span>
               <input value={card.title} onChange={(event) => updateCard(card.id, { title: event.target.value })} />
             </label>
-            <label className="menu-cell">
-              <span>图片路径</span>
-              <input value={card.imageSrc} onChange={(event) => updateCard(card.id, { imageSrc: event.target.value })} />
-            </label>
+            <ImageUploadField
+              label="卡片图片"
+              onChange={(imageSrc) => updateCard(card.id, { imageSrc })}
+              value={card.imageSrc}
+            />
             <label className="menu-cell">
               <span>图片说明</span>
               <input value={card.imageAlt} onChange={(event) => updateCard(card.id, { imageAlt: event.target.value })} />
@@ -2616,10 +2797,11 @@ function AboutIntroEditor({
           <span>简介段落 2</span>
           <textarea value={value.paragraphs[1] ?? ''} onChange={(event) => updateParagraph(1, event.target.value)} />
         </label>
-        <label className="menu-cell">
-          <span>图片路径</span>
-          <input value={value.imageSrc} onChange={(event) => onChange({ ...value, imageSrc: event.target.value })} />
-        </label>
+        <ImageUploadField
+          label="企业简介图片"
+          onChange={(imageSrc) => onChange({ ...value, imageSrc })}
+          value={value.imageSrc}
+        />
         <label className="menu-cell">
           <span>图片说明</span>
           <input value={value.imageAlt} onChange={(event) => onChange({ ...value, imageAlt: event.target.value })} />
@@ -2729,10 +2911,11 @@ function AboutPanelsEditor({
               </label>
             ) : (
               <>
-                <label className="menu-cell">
-                  <span>图片路径</span>
-                  <input value={panel.imageSrc} onChange={(event) => updatePanel(panel.id, { imageSrc: event.target.value })} />
-                </label>
+                <ImageUploadField
+                  label="卡片图片"
+                  onChange={(imageSrc) => updatePanel(panel.id, { imageSrc })}
+                  value={panel.imageSrc}
+                />
                 <label className="menu-cell">
                   <span>图片说明</span>
                   <input value={panel.imageAlt} onChange={(event) => updatePanel(panel.id, { imageAlt: event.target.value })} />
@@ -3256,10 +3439,11 @@ function CaseCardsEditor({
               <span>右上角标</span>
               <input value={item.corner} onChange={(event) => updateItem(item.id, { corner: event.target.value })} />
             </label>
-            <label className="menu-cell">
-              <span>图片路径</span>
-              <input value={item.imageSrc} onChange={(event) => updateItem(item.id, { imageSrc: event.target.value })} />
-            </label>
+            <ImageUploadField
+              label="案例图片"
+              onChange={(imageSrc) => updateItem(item.id, { imageSrc })}
+              value={item.imageSrc}
+            />
             <label className="menu-cell">
               <span>图片说明</span>
               <input value={item.imageAlt} onChange={(event) => updateItem(item.id, { imageAlt: event.target.value })} />
@@ -3312,10 +3496,11 @@ function NewsLeadEditor({
           <span>摘要</span>
           <textarea value={value.description} onChange={(event) => onChange({ ...value, description: event.target.value })} />
         </label>
-        <label className="menu-cell">
-          <span>图片路径</span>
-          <input value={value.imageSrc} onChange={(event) => onChange({ ...value, imageSrc: event.target.value })} />
-        </label>
+        <ImageUploadField
+          label="资讯主图"
+          onChange={(imageSrc) => onChange({ ...value, imageSrc })}
+          value={value.imageSrc}
+        />
         <label className="menu-cell">
           <span>图片说明</span>
           <input value={value.imageAlt} onChange={(event) => onChange({ ...value, imageAlt: event.target.value })} />
@@ -3432,10 +3617,11 @@ function PhotoCardsEditor({
               <span>标题</span>
               <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
             </label>
-            <label className="menu-cell">
-              <span>图片路径</span>
-              <input value={item.imageSrc} onChange={(event) => updateItem(item.id, { imageSrc: event.target.value })} />
-            </label>
+            <ImageUploadField
+              label="图库图片"
+              onChange={(imageSrc) => updateItem(item.id, { imageSrc })}
+              value={item.imageSrc}
+            />
             <label className="menu-cell">
               <span>图片说明</span>
               <input value={item.imageAlt} onChange={(event) => updateItem(item.id, { imageAlt: event.target.value })} />

@@ -18,6 +18,7 @@ import {
   Handshake,
   Home,
   Image,
+  Landmark,
   LayoutDashboard,
   LoaderCircle,
   LogOut,
@@ -43,6 +44,7 @@ type AdminSection =
   | 'pageNews'
   | 'pageCooperation'
   | 'pageGallery'
+  | 'pageInvestors'
 
 type ConsultSubmissionField = {
   name: string
@@ -327,6 +329,7 @@ const pageTargetOptions = [
   { label: '资讯中心', value: 'news.html', page: 'news' },
   { label: '招商合作', value: 'cooperation.html', page: 'cooperation' },
   { label: '实景图库', value: 'gallery.html', page: 'gallery' },
+  { label: '投资人业务', value: 'investors.html', page: 'investors' },
 ]
 
 const defaultNavigationItems: Array<NavigationMenuItem> = pageTargetOptions.map((item) => ({
@@ -642,6 +645,33 @@ const defaultGalleryPhotos: Array<PhotoCardItem> = [
   { id: 'delivery-team', title: '交付与运维团队', description: '从方案测算、设备交付到现场运维的协作支持。', imageSrc: 'assets/materials/team-portraits.png', imageAlt: '交付团队', featured: true },
 ]
 
+const defaultInvestorsHero: PageHeroConfig = {
+  title: '投资人业务',
+  subtitle: '面向算力硬件、智算机房与绿电园区的资产合作及运营服务',
+}
+
+const defaultInvestmentCards: Array<BusinessCardItem> = [
+  { id: 'hardware-investment', title: '算力硬件投资', description: '围绕 GPU 服务器、整机集群与交付周期，匹配采购、托管和运营方案。', href: '#intent', linkLabel: '了解合作方式', iconClass: 'ri-cpu-line' },
+  { id: 'data-center-operation', title: '智算机房资产运营', description: '从机柜资源、供配电与网络能力到运维响应，建立可持续的资产运营路径。', href: '#intent', linkLabel: '查看运营方案', iconClass: 'ri-server-line' },
+  { id: 'green-park-partnership', title: '绿电园区共建', description: '结合园区资源、绿电条件与算力需求，推进项目测算、建设和长期运营。', href: '#intent', linkLabel: '发起项目对接', iconClass: 'ri-building-4-line' },
+]
+
+const defaultInvestorPhotos: Array<PhotoCardItem> = [
+  { id: 'investment-park', title: '园区资源评估', description: '围绕区位、电力、网络与建设条件进行项目基础筛选。', imageSrc: 'assets/materials/factory-aerial.png', imageAlt: '绿电园区航拍', featured: true },
+  { id: 'investment-room', title: '机房运营能力', description: '标准化机房环境、基础设施和日常运维支持。', imageSrc: 'assets/materials/server-room.png', imageAlt: '智算机房', featured: false },
+  { id: 'investment-dashboard', title: '运营数据复盘', description: '以项目进度、资产状态和合作节点支持持续沟通。', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '运营数据面板', featured: false },
+]
+
+const defaultInvestorProcess: LabelListConfig = {
+  title: '合作推进流程',
+  items: [
+    { id: 'project-screening', label: '项目筛选' },
+    { id: 'due-diligence', label: '尽调测算' },
+    { id: 'delivery-operation', label: '交付运营' },
+    { id: 'return-review', label: '收益复盘' },
+  ],
+}
+
 const defaultPageHeroes: Partial<Record<AdminSection, PageHeroConfig>> = {
   pageAbout: defaultAboutHero,
   pageBusiness: defaultBusinessHero,
@@ -650,6 +680,7 @@ const defaultPageHeroes: Partial<Record<AdminSection, PageHeroConfig>> = {
   pageNews: defaultNewsHero,
   pageCooperation: defaultCooperationHero,
   pageGallery: defaultGalleryHero,
+  pageInvestors: defaultInvestorsHero,
 }
 
 const legacyPageHeroDefaults: Partial<Record<AdminSection, PageHeroConfig>> = {
@@ -681,6 +712,10 @@ const legacyPageHeroDefaults: Partial<Record<AdminSection, PageHeroConfig>> = {
     title: '实景图库',
     subtitle: '集中展示机房、设备、项目现场和合作空间实景素材。',
   },
+  pageInvestors: {
+    title: '投资人业务',
+    subtitle: '面向算力硬件、智算机房与绿电园区的资产合作及运营服务',
+  },
 }
 
 const topNav: Array<{ label: string; section: AdminSection }> = [
@@ -704,6 +739,7 @@ const pageNav = [
   { label: '资讯中心', icon: SquarePen, section: 'pageNews' },
   { label: '招商合作', icon: Handshake, section: 'pageCooperation' },
   { label: '实景图库', icon: Image, section: 'pageGallery' },
+  { label: '投资人业务', icon: Landmark, section: 'pageInvestors' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
 
 const modules: Record<AdminSection, ModuleConfig> = {
@@ -870,6 +906,21 @@ const modules: Record<AdminSection, ModuleConfig> = {
       { title: '工厂现场图组', meta: '设备、车间、产线实景', state: '使用中' },
       { title: '项目案例图库', meta: 'case-*.png 图片组', state: '待整理' },
       { title: '首页推荐图片', meta: '同步主站首屏与案例区', state: '待复核' },
+    ],
+  },
+  pageInvestors: {
+    id: 'pageInvestors',
+    title: '投资人业务',
+    description: '管理算力硬件、智算机房与绿电园区的投资合作内容和线索入口。',
+    stats: [
+      { label: '合作方向', value: '3', note: '硬件、机房、园区' },
+      { label: '展示项目', value: '3', note: '可独立维护图文内容' },
+      { label: '页面文件', value: 'investors.html', note: '投资人业务页面' },
+    ],
+    items: [
+      { title: '投资方向', meta: '合作卡片、按钮和跳转链接', state: '已配置' },
+      { title: '项目展示', meta: '园区、机房和运营素材', state: '已配置' },
+      { title: '合作意向表单', meta: '收集投资项目线索', state: '已配置' },
     ],
   },
 }
@@ -1076,6 +1127,31 @@ const galleryBlockFields: Array<EditableField> = [
   },
 ]
 
+const investorsBlockFields: Array<EditableField> = [
+  heroField(defaultInvestorsHero),
+  {
+    id: 'investmentCards',
+    label: '投资合作方向',
+    type: 'business-cards',
+    defaultValue: defaultInvestmentCards,
+    hint: '可新增、编辑、删除和排序投资方向卡片，包含图标、文案、按钮及跳转链接',
+  },
+  {
+    id: 'projectPhotos',
+    label: '项目展示图文',
+    type: 'photos',
+    defaultValue: defaultInvestorPhotos,
+    hint: '支持上传图片、编辑图文、删除和排序，重点项目可占用更宽展示位',
+  },
+  {
+    id: 'process',
+    label: '合作推进流程',
+    type: 'label-list',
+    defaultValue: defaultInvestorProcess,
+    hint: '可增删编辑并排序合作推进节点',
+  },
+]
+
 const editableSections: Record<AdminSection, { title: string; fields: Array<EditableField> }> = {
   navigation: {
     title: '导航配置',
@@ -1170,6 +1246,10 @@ const editableSections: Record<AdminSection, { title: string; fields: Array<Edit
     title: '实景图库配置',
     fields: galleryBlockFields,
   },
+  pageInvestors: {
+    title: '投资人业务配置',
+    fields: investorsBlockFields,
+  },
 }
 
 function buildDefaultFormState(): AdminFormState {
@@ -1234,6 +1314,26 @@ function migrateLegacyHomeSection(section?: Record<string, FieldValue>) {
   }
 }
 
+function migrateNavigationSection(section?: Record<string, FieldValue>) {
+  if (!section || !Array.isArray(section.menuItems)) return section
+
+  return {
+    ...section,
+    menuItems: section.menuItems.map((item) => {
+      if (item.label === '投资人业务' || item.page === 'business' && item.id.startsWith('custom-') && item.label.includes('投资')) {
+        return {
+          ...item,
+          id: 'investors',
+          href: 'investors.html',
+          page: 'investors',
+          visible: item.visible !== false,
+        }
+      }
+      return item
+    }),
+  }
+}
+
 function isRecordValue(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -1292,6 +1392,7 @@ function mergeFormState(
   }
   if (savedBranding) savedSections.branding = savedBranding
 
+  savedSections.navigation = migrateNavigationSection(savedSections.navigation as Record<string, FieldValue>)
   savedSections.footer = migrateLegacyFooterSection(savedSections.footer as Record<string, FieldValue>)
   savedSections.pageHome = migrateLegacyHomeSection(savedSections.pageHome as Record<string, FieldValue>)
   ;([
@@ -1302,6 +1403,7 @@ function mergeFormState(
     'pageNews',
     'pageCooperation',
     'pageGallery',
+    'pageInvestors',
   ] as Array<AdminSection>).forEach((section) => {
     savedSections[section] = migrateLegacyPageSection(
       savedSections[section] as Record<string, FieldValue> | undefined,

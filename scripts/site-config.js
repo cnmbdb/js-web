@@ -12,6 +12,7 @@
     news: 'pageNews',
     cooperation: 'pageCooperation',
     gallery: 'pageGallery',
+    investors: 'pageInvestors',
   }
   const navFieldMap = {
     home: 'homeLabel',
@@ -140,8 +141,8 @@
       subtitle: pageConfig.heroSubtitle,
     }
 
-    setText('.head h1, .title h1, .page-head h1', hero.title)
-    setText('.head p, .title p, .page-head p', hero.subtitle)
+    setText('.head h1, .title h1, .page-head h1, .investor-copy h1', hero.title)
+    setText('.head p, .title p, .page-head p, .investor-copy > p:not(.eyebrow)', hero.subtitle)
   }
 
   function createSectionTitle(text) {
@@ -654,7 +655,8 @@
       })
     }
 
-    applyFormPanels('.forms', pageConfig.formPanels, 'form-panel', 'primary-btn', false)
+    applyFormPanels('.forms', pageConfig.formPanels, 'form-panel', 'primary-btn', true)
+    bindConsultSubmissionForms()
     applyDownloadSection('.download-panel', pageConfig.downloadSection, 'download-grid')
   }
 
@@ -684,6 +686,68 @@
     })
   }
 
+  function applyInvestorsPage(pageConfig) {
+    applyHero(pageConfig)
+
+    if (Array.isArray(pageConfig.investmentCards)) {
+      document.querySelectorAll('.investor-focus-grid').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.investmentCards.forEach((card) => {
+          if (!card) return
+          const article = document.createElement('article')
+          article.className = 'investor-focus-card'
+          article.appendChild(createIcon(card.iconClass))
+          article.appendChild(createTextElement('h2', '', card.title || '未命名方向'))
+          article.appendChild(createTextElement('p', '', card.description || ''))
+          const link = document.createElement('a')
+          link.href = card.href || '#intent'
+          link.append(document.createTextNode(card.linkLabel || '查看详情 '))
+          link.appendChild(createIcon('ri-arrow-right-line'))
+          article.appendChild(link)
+          container.appendChild(article)
+        })
+      })
+    }
+
+    if (Array.isArray(pageConfig.projectPhotos)) {
+      ensureRuntimeStyle(
+        'suxin-investor-featured-style',
+        '.investor-project.featured{grid-column:span 2}.investor-project.featured img{height:300px}@media(max-width:760px){.investor-project.featured{grid-column:auto}.investor-project.featured img{height:230px}}',
+      )
+      document.querySelectorAll('.investor-project-grid').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.projectPhotos.forEach((item) => {
+          if (!item) return
+          const article = document.createElement('article')
+          article.className = item.featured ? 'investor-project featured' : 'investor-project'
+          const image = document.createElement('img')
+          setImage(image, item.imageSrc, item.imageAlt)
+          const copy = document.createElement('div')
+          copy.appendChild(createTextElement('h2', '', item.title || '未命名项目'))
+          copy.appendChild(createTextElement('p', '', item.description || ''))
+          article.append(image, copy)
+          container.appendChild(article)
+        })
+      })
+    }
+
+    if (pageConfig.process && Array.isArray(pageConfig.process.items)) {
+      setText('.investor-process-title', pageConfig.process.title)
+      document.querySelectorAll('.investor-process').forEach((container) => {
+        container.innerHTML = ''
+        pageConfig.process.items.forEach((item, index) => {
+          if (!item) return
+          const step = document.createElement('article')
+          step.className = 'investor-step'
+          step.appendChild(createTextElement('span', '', String(index + 1).padStart(2, '0')))
+          step.appendChild(createTextElement('strong', '', item.label || '未命名步骤'))
+          container.appendChild(step)
+        })
+      })
+    }
+
+  }
+
   function toCssSize(value, fallback) {
     const text = String(value || '').trim()
     if (!text) return fallback
@@ -701,9 +765,12 @@
         navigation.menuItems
           .filter((item) => item && item.visible !== false)
           .forEach((item) => {
+            const isLegacyInvestorLink = item.label === '投资人业务'
+            const href = isLegacyInvestorLink ? 'investors.html' : item.href || 'index.html'
+            const pageId = isLegacyInvestorLink ? 'investors' : item.page || ''
             const link = document.createElement('a')
-            link.href = item.href || 'index.html'
-            link.dataset.page = item.page || ''
+            link.href = href
+            link.dataset.page = pageId
             link.textContent = item.label || '未命名菜单'
             nav.appendChild(link)
           })
@@ -906,6 +973,11 @@
       return
     }
 
+    if (page === 'investors') {
+      applyInvestorsPage(pageConfig)
+      return
+    }
+
     applyHero(pageConfig)
   }
 
@@ -919,7 +991,7 @@
     if (page === 'home' && !sections.pageHome) {
       document.querySelectorAll('.hero-video').forEach((video) => loadHeroVideo(video, video.dataset.src))
     }
-    if (page === 'consult') bindConsultSubmissionForms()
+    if (page === 'consult' || page === 'cooperation') bindConsultSubmissionForms()
   }
 
   window.SuxinSiteConfig = {

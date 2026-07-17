@@ -14,6 +14,7 @@ const rootFiles = [
   'cooperation.html',
   'news.html',
   'gallery.html',
+  'investors.html',
 ]
 
 await rm(siteDir, { recursive: true, force: true })

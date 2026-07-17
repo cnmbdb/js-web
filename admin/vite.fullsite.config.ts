@@ -15,6 +15,7 @@ const pageFiles = new Set([
   'consult.html',
   'cooperation.html',
   'gallery.html',
+  'investors.html',
   'news.html',
 ])
 const staticPrefixes = ['assets/', 'partials/', 'scripts/']

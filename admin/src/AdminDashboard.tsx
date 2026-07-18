@@ -2380,6 +2380,9 @@ function NavigationMenuEditor({
   value: Array<NavigationMenuItem>
   onChange: (value: Array<NavigationMenuItem>) => void
 }) {
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
   const updateItem = (id: string, patch: Partial<NavigationMenuItem>) => {
     onChange(value.map((item) => (item.id === id ? { ...item, ...patch } : item)))
   }
@@ -2402,6 +2405,24 @@ function NavigationMenuEditor({
     onChange(value.filter((item) => item.id !== id))
   }
 
+  const moveItem = (fromId: string, toId: string) => {
+    if (fromId === toId) return
+
+    const fromIndex = value.findIndex((item) => item.id === fromId)
+    const toIndex = value.findIndex((item) => item.id === toId)
+    if (fromIndex < 0 || toIndex < 0) return
+
+    const nextItems = [...value]
+    const [movedItem] = nextItems.splice(fromIndex, 1)
+    nextItems.splice(toIndex, 0, movedItem)
+    onChange(nextItems)
+  }
+
+  const finishDragging = () => {
+    setDraggingId(null)
+    setDragOverId(null)
+  }
+
   return (
     <div className="menu-editor span-2">
       <div className="menu-editor-head">
@@ -2416,8 +2437,49 @@ function NavigationMenuEditor({
 
       <div className="menu-list-editor">
         {value.map((item, index) => (
-          <div className="menu-edit-row" key={item.id}>
-            <span className="menu-order">{index + 1}</span>
+          <div
+            className={`menu-edit-row navigation-menu-row${draggingId === item.id ? ' is-dragging' : ''}${dragOverId === item.id && draggingId !== item.id ? ' is-drag-over' : ''}`}
+            key={item.id}
+            onDragLeave={() => {
+              if (dragOverId === item.id) setDragOverId(null)
+            }}
+            onDragOver={(event) => {
+              event.preventDefault()
+              event.dataTransfer.dropEffect = 'move'
+              if (draggingId && draggingId !== item.id) setDragOverId(item.id)
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              moveItem(event.dataTransfer.getData('text/plain') || draggingId || '', item.id)
+              finishDragging()
+            }}
+          >
+            <button
+              aria-label={`拖动第 ${index + 1} 项排序`}
+              className="menu-order drag-handle"
+              draggable
+              onDragEnd={finishDragging}
+              onDragStart={(event) => {
+                setDraggingId(item.id)
+                event.dataTransfer.effectAllowed = 'move'
+                event.dataTransfer.setData('text/plain', item.id)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'ArrowUp' && index > 0) {
+                  event.preventDefault()
+                  moveItem(item.id, value[index - 1].id)
+                }
+                if (event.key === 'ArrowDown' && index < value.length - 1) {
+                  event.preventDefault()
+                  moveItem(item.id, value[index + 1].id)
+                }
+              }}
+              title="拖动排序；也可用上下方向键"
+              type="button"
+            >
+              <GripVertical size={16} aria-hidden="true" />
+              <span>{index + 1}</span>
+            </button>
             <label className="menu-cell">
               <span>菜单名称</span>
               <input

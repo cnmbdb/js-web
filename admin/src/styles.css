@@ -1368,8 +1368,13 @@ tbody tr:last-child td {
 }
 
 .menu-edit-row.is-dragging {
-  border-color: rgba(142, 162, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.45);
   opacity: 0.62;
+}
+
+.menu-edit-row.is-drag-over {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 3px 0 0 #f2f2f2;
 }
 
 .footer-menu-row {
@@ -1394,6 +1399,7 @@ tbody tr:last-child td {
 .drag-handle {
   width: 40px;
   cursor: grab;
+  padding: 0;
 }
 
 .drag-handle:active {

@@ -637,6 +637,68 @@
     }
   }
 
+  function getDocsBaseUrl() {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3000'
+    }
+    return 'https://docs.suxin.ai'
+  }
+
+  function getArticleIcon(category) {
+    if (/机房|托管|硬件/.test(category || '')) return 'ri-server-line'
+    if (/园区|绿电/.test(category || '')) return 'ri-leaf-line'
+    if (/AIGC|应用/.test(category || '')) return 'ri-magic-line'
+    if (/跨境|出海/.test(category || '')) return 'ri-global-line'
+    return 'ri-article-line'
+  }
+
+  async function applyPublishedArticleIndex() {
+    try {
+      const response = await fetch(`articles.json?v=${Date.now()}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const articles = await response.json()
+      if (!Array.isArray(articles) || !articles.length) return
+
+      document.querySelectorAll('.list').forEach((container) => {
+        container.innerHTML = ''
+        articles.forEach((item) => {
+          if (!item?.slug || !item?.title) return
+          const link = document.createElement('a')
+          link.className = 'news-card'
+          link.href = `${getDocsBaseUrl()}/${item.path || `blog/${item.slug}`}`
+
+          if (item.cover) {
+            const image = document.createElement('img')
+            image.className = 'news-card-cover'
+            image.src = item.cover
+            image.alt = item.title
+            link.appendChild(image)
+          } else {
+            link.appendChild(createIcon(getArticleIcon(item.category)))
+          }
+
+          const meta = document.createElement('div')
+          meta.className = 'news-card-meta'
+          meta.appendChild(createTextElement('span', '', item.category || '资讯'))
+          meta.appendChild(createTextElement('time', '', item.publishedAt || ''))
+          link.appendChild(meta)
+          link.appendChild(createTextElement('h3', '', item.title))
+          link.appendChild(createTextElement('p', '', item.description || ''))
+
+          if (Array.isArray(item.tags) && item.tags.length) {
+            const tags = document.createElement('div')
+            tags.className = 'news-card-tags'
+            item.tags.slice(0, 3).forEach((tag) => tags.appendChild(createTextElement('span', '', tag)))
+            link.appendChild(tags)
+          }
+          container.appendChild(link)
+        })
+      })
+    } catch (error) {
+      console.warn('无法读取文章索引，将保留资讯页默认卡片。', error)
+    }
+  }
+
   function applyCooperationPage(pageConfig) {
     applyHero(pageConfig)
 
@@ -988,6 +1050,7 @@
     applyBranding(sections.branding)
     applyFooter(sections.footer)
     applyPage(sections[pageToSection[page]])
+    if (page === 'news') await applyPublishedArticleIndex()
     if (page === 'home' && !sections.pageHome) {
       document.querySelectorAll('.hero-video').forEach((video) => loadHeroVideo(video, video.dataset.src))
     }

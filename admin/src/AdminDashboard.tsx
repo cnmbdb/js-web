@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 
 import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage } from './supabase'
+import { ArticleManager } from './ArticleManager'
 
 type AdminSection =
   | 'navigation'
@@ -1771,6 +1772,7 @@ export function AdminDashboard({
           onDeleteSelected={deleteSelectedSubmissions}
           onToggleVisibleSelection={toggleVisibleSubmissionSelection}
           setSubmissionView={setSubmissionView}
+          userEmail={userEmail}
         />
       </section>
     </main>
@@ -1872,6 +1874,7 @@ function ModulePage({
   onDeleteSelected,
   onToggleVisibleSelection,
   setSubmissionView,
+  userEmail,
 }: {
   activeSection: AdminSection
   formValues: Record<string, FieldValue>
@@ -1889,6 +1892,7 @@ function ModulePage({
   onDeleteSelected: () => void
   onToggleVisibleSelection: (ids: Array<string>) => void
   setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
+  userEmail: string
 }) {
   return (
     <>
@@ -1917,6 +1921,8 @@ function ModulePage({
           />
         </section>
       ) : null}
+
+      {activeSection === 'pageNews' ? <ArticleManager userEmail={userEmail} /> : null}
     </>
   )
 }

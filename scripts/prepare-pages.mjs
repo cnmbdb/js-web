@@ -1,5 +1,7 @@
-import { cp, mkdir, rm } from 'node:fs/promises'
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+
+import { buildPublicArticleIndex } from './article-content.mjs'
 
 const root = process.cwd()
 const siteDir = join(root, '_site')
@@ -34,3 +36,6 @@ await cp(join(root, 'partials'), join(siteDir, 'partials'), {
 
 await mkdir(join(siteDir, 'scripts'), { recursive: true })
 await cp(join(root, 'scripts', 'site-config.js'), join(siteDir, 'scripts', 'site-config.js'))
+
+const articles = await buildPublicArticleIndex()
+await writeFile(join(siteDir, 'articles.json'), `${JSON.stringify(articles, null, 2)}\n`, 'utf8')

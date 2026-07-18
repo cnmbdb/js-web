@@ -6,6 +6,8 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+import { articleContentPlugin } from './article-content-plugin'
+
 const siteRoot = resolve(__dirname, '..')
 const pageFiles = new Set([
   'index.html',
@@ -40,7 +42,10 @@ function fullSitePages(): Plugin {
     configureServer(server) {
       server.watcher.add([siteRoot])
       server.watcher.on('change', (file) => {
-        if (file.startsWith(siteRoot)) {
+        const changedFile = relative(siteRoot, file)
+        const shouldReload =
+          pageFiles.has(changedFile) || staticPrefixes.some((prefix) => changedFile.startsWith(prefix))
+        if (shouldReload) {
           server.ws.send({ type: 'full-reload' })
         }
       })
@@ -92,7 +97,7 @@ function fullSitePages(): Plugin {
 export default defineConfig({
   base: '/admin/',
   resolve: { tsconfigPaths: true },
-  plugins: [fullSitePages(), tanstackStart(), tailwindcss(), viteReact()],
+  plugins: [articleContentPlugin(), fullSitePages(), tanstackStart(), tailwindcss(), viteReact()],
   server: {
     fs: { allow: [siteRoot] },
   },

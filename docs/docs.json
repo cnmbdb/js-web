@@ -1,0 +1,65 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "速芯算力 · 博客与文档",
+  "description": "绿色算力基础设施、GPU托管、园区共建与企业AIGC应用资料",
+  "colors": {
+    "primary": "#16a34a",
+    "light": "#22c55e",
+    "dark": "#15803d"
+  },
+  "navigation": {
+    "pages": [
+      {
+        "group": "开始阅读",
+        "pages": [
+          "index"
+        ]
+      },
+      {
+        "group": "博客文章",
+        "pages": [
+          "blog/green-compute-operations",
+          "blog/data-center-hosting-stability",
+          "blog/enterprise-aigc-cost-analysis"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "速芯算力官网",
+          "href": "https://suxin.ai",
+          "icon": "house"
+        }
+      ]
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "资讯中心",
+        "href": "https://suxin.ai/news.html"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "业务咨询",
+      "href": "https://suxin.ai/consult.html"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/cnmbdb/js-web"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity"
+    ]
+  }
+}

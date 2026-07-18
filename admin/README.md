@@ -68,6 +68,21 @@ Image controls upload JPEG, PNG, WebP, GIF, or AVIF files up to 10MB to the publ
 
 Database and Storage policies are versioned in `../supabase/migrations`.
 
+## Local Blog And Docs
+
+The local article editor writes Markdown/MDX files directly into `../docs/blog`. Draft files stay out of the public index, while published files are added to the Mintlify blog navigation and `articles.json` automatically.
+
+Start the full-site admin and Mintlify preview in separate terminals from the repository root:
+
+```bash
+npm run site:dev
+npm run docs:dev
+```
+
+Open the admin at `http://127.0.0.1:4173/admin/`, the public news index at `http://127.0.0.1:4173/news.html`, and Mintlify at `http://127.0.0.1:3000/`.
+
+The production-ready Supabase draft table and `article-content` Edge Function live under `../supabase`, but are intentionally not required for local editing.
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:

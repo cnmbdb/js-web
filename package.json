@@ -3,12 +3,16 @@
     "admin:build": "npm --prefix admin run build",
     "admin:build:pages": "npm --prefix admin run build:pages",
     "admin:dev": "npm --prefix admin run dev",
+    "articles:index": "node scripts/build-article-index.mjs",
+    "docs:dev": "cd docs && ../node_modules/.bin/mint dev --no-open",
     "site:dev": "npm --prefix admin run dev:site",
     "pages:build": "node scripts/prepare-pages.mjs && npm run admin:build:pages",
     "tanstack": "tanstack"
   },
   "devDependencies": {
     "@tanstack/cli": "^0.69.5",
+    "gray-matter": "^4.0.3",
+    "mint": "^4.2.715",
     "shadcn": "^4.13.0"
   }
 }

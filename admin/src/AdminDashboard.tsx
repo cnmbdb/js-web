@@ -1050,20 +1050,6 @@ const consultBlockFields: Array<EditableField> = [
 const casesBlockFields: Array<EditableField> = [
   heroField(defaultCasesHero),
   {
-    id: 'tabs',
-    label: '案例分类标签',
-    type: 'label-list',
-    defaultValue: defaultCaseTabs,
-    hint: '对应案例页顶部三个分类标签，第一项为默认高亮',
-  },
-  {
-    id: 'filters',
-    label: '案例筛选项',
-    type: 'filters',
-    defaultValue: defaultCaseFilters,
-    hint: '对应案例页左侧筛选栏：图标、名称和右侧展开图标',
-  },
-  {
     id: 'caseCards',
     label: '案例卡片',
     type: 'case-cards',

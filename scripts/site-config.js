@@ -379,6 +379,13 @@
       if (!card) return
       setText(`${selector} .panel-title`, card.title)
       document.querySelectorAll(selector).forEach((element) => {
+        const defaultWidth = index === 0 ? 148 : 0
+        const defaultHeight = index === 0 ? 148 : 168
+        const imageWidth = card.imageWidth === undefined ? defaultWidth : Math.min(1200, Math.max(0, Number(card.imageWidth) || 0))
+        const imageHeight = card.imageHeight === undefined ? defaultHeight : Math.min(1200, Math.max(0, Number(card.imageHeight) || 0))
+        element.style.setProperty('--home-card-image-width', imageWidth ? `${imageWidth}px` : '100%')
+        element.style.setProperty('--home-card-image-height', imageHeight ? `${imageHeight}px` : 'auto')
+        element.style.setProperty('--home-card-image-fit', card.imageFit || (index === 0 ? 'contain' : 'cover'))
         const image = element.querySelector('img')
         setImage(image, card.imageSrc, card.imageAlt)
 

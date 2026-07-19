@@ -120,6 +120,9 @@ type HomeMediaCard = {
   imageSrc: string
   imageAlt: string
   href: string
+  imageFit?: 'cover' | 'contain'
+  imageWidth?: number
+  imageHeight?: number
 }
 
 type PageHeroConfig = {
@@ -380,8 +383,8 @@ const defaultHomeEntrances: Array<HomeEntranceItem> = [
 ]
 
 const defaultHomeMediaCards: Array<HomeMediaCard> = [
-  { id: 'scenario-panel', title: '应用场景', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '算力数据面板', href: 'consult.html' },
-  { id: 'news-panel', title: '资讯中心', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房', href: 'news.html' },
+  { id: 'scenario-panel', title: '应用场景', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '算力数据面板', href: 'consult.html', imageFit: 'contain', imageWidth: 148, imageHeight: 148 },
+  { id: 'news-panel', title: '资讯中心', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房', href: 'news.html', imageFit: 'cover', imageWidth: 0, imageHeight: 168 },
 ]
 
 const defaultAboutHero: PageHeroConfig = {
@@ -2852,6 +2855,38 @@ function HomeMediaCardsEditor({
             <label className="menu-cell">
               <span>点击跳转</span>
               <input value={card.href} onChange={(event) => updateCard(card.id, { href: event.target.value })} />
+            </label>
+            <label className="menu-cell">
+              <span>图片显示方式</span>
+              <select
+                value={card.imageFit || (index === 0 ? 'contain' : 'cover')}
+                onChange={(event) => updateCard(card.id, { imageFit: event.target.value as 'cover' | 'contain' })}
+              >
+                <option value="contain">完整显示</option>
+                <option value="cover">填满裁切</option>
+              </select>
+            </label>
+            <label className="menu-cell">
+              <span>图片宽度（px，0 为铺满）</span>
+              <input
+                max="1200"
+                min="0"
+                onChange={(event) => updateCard(card.id, { imageWidth: Number(event.target.value) })}
+                step="10"
+                type="number"
+                value={card.imageWidth ?? (index === 0 ? 148 : 0)}
+              />
+            </label>
+            <label className="menu-cell">
+              <span>图片高度（px，0 为自动）</span>
+              <input
+                max="1200"
+                min="0"
+                onChange={(event) => updateCard(card.id, { imageHeight: Number(event.target.value) })}
+                step="10"
+                type="number"
+                value={card.imageHeight ?? (index === 0 ? 148 : 168)}
+              />
             </label>
           </article>
         ))}

@@ -445,6 +445,10 @@
           if (!panel) return
           const article = document.createElement('article')
           article.className = 'panel'
+          const imageWidth = Math.min(100, Math.max(20, Number(panel.imageWidthPercent) || 100))
+          const imageHeight = Math.min(1200, Math.max(0, Number(panel.imageHeight) || 0))
+          article.style.setProperty('--panel-image-width', `${imageWidth}%`)
+          if (imageHeight) article.style.setProperty('--panel-image-height', `${imageHeight}px`)
           article.appendChild(createSectionTitle(panel.title))
 
           if (panel.variant === 'chips') {
@@ -455,6 +459,8 @@
             })
             article.appendChild(capability)
           } else {
+            const imageFit = panel.imageFit || 'contain'
+            article.classList.add(`panel-image-${imageFit}`)
             const image = document.createElement('img')
             setImage(image, panel.imageSrc, panel.imageAlt)
             article.appendChild(image)

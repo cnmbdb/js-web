@@ -152,6 +152,9 @@ type AboutPanelConfig = {
   chips: Array<string>
   imageSrc: string
   imageAlt: string
+  imageFit?: 'cover' | 'contain'
+  imageWidthPercent?: number
+  imageHeight?: number
 }
 
 type BusinessCardItem = {
@@ -425,6 +428,9 @@ const defaultAboutPanels: Array<AboutPanelConfig> = [
     chips: [],
     imageSrc: 'assets/materials/team-portraits.png',
     imageAlt: '核心管理团队',
+    imageFit: 'contain',
+    imageWidthPercent: 100,
+    imageHeight: 0,
   },
   {
     id: 'certificates',
@@ -433,6 +439,9 @@ const defaultAboutPanels: Array<AboutPanelConfig> = [
     chips: [],
     imageSrc: 'assets/materials/certificates.png',
     imageAlt: '资质证书与荣誉',
+    imageFit: 'contain',
+    imageWidthPercent: 100,
+    imageHeight: 0,
   },
 ]
 
@@ -3089,6 +3098,38 @@ function AboutPanelsEditor({
                 <label className="menu-cell">
                   <span>图片说明</span>
                   <input value={panel.imageAlt} onChange={(event) => updatePanel(panel.id, { imageAlt: event.target.value })} />
+                </label>
+                <label className="menu-cell">
+                  <span>图片显示方式</span>
+                  <select
+                    value={panel.imageFit || 'contain'}
+                    onChange={(event) => updatePanel(panel.id, { imageFit: event.target.value as 'cover' | 'contain' })}
+                  >
+                    <option value="contain">完整显示</option>
+                    <option value="cover">填满裁切</option>
+                  </select>
+                </label>
+                <label className="menu-cell">
+                  <span>图片宽度（%）</span>
+                  <input
+                    max="100"
+                    min="20"
+                    onChange={(event) => updatePanel(panel.id, { imageWidthPercent: Number(event.target.value) })}
+                    step="5"
+                    type="number"
+                    value={panel.imageWidthPercent ?? 100}
+                  />
+                </label>
+                <label className="menu-cell">
+                  <span>图片高度（px，0 为自动）</span>
+                  <input
+                    max="1200"
+                    min="0"
+                    onChange={(event) => updatePanel(panel.id, { imageHeight: Number(event.target.value) })}
+                    step="10"
+                    type="number"
+                    value={panel.imageHeight ?? 0}
+                  />
                 </label>
               </>
             )}

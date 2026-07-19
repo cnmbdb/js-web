@@ -576,20 +576,21 @@
         container.innerHTML = ''
         pageConfig.caseCards.forEach((item) => {
           if (!item) return
-          const article = document.createElement('article')
-          article.className = item.highlighted ? 'case-card dark' : 'case-card'
-          article.appendChild(createTextElement('span', 'tag', item.tag))
-          article.appendChild(createTextElement('span', 'corner', item.corner))
+          const card = document.createElement(item.href ? 'a' : 'article')
+          card.className = item.highlighted ? 'case-card dark' : 'case-card'
+          if (item.href) card.href = resolveArticleHref(item.href)
+          card.appendChild(createTextElement('span', 'tag', item.tag))
+          card.appendChild(createTextElement('span', 'corner', item.corner))
           const image = document.createElement('img')
           setImage(image, item.imageSrc, item.imageAlt)
-          article.appendChild(image)
-          article.appendChild(createTextElement('h2', '', item.title || '未命名案例'))
+          card.appendChild(image)
+          card.appendChild(createTextElement('h2', '', item.title || '未命名案例'))
           if (item.status) {
             const status = createTextElement('span', '', item.status)
             if (item.mutedStatus) status.style.color = '#8a948e'
-            article.appendChild(status)
+            card.appendChild(status)
           }
-          container.appendChild(article)
+          container.appendChild(card)
         })
       })
     }
@@ -608,6 +609,7 @@
     const lead = pageConfig.leadArticle
     if (lead) {
       document.querySelectorAll('.lead').forEach((article) => {
+        if (lead.href) article.setAttribute('href', resolveArticleHref(lead.href))
         setImage(article.querySelector('img'), lead.imageSrc, lead.imageAlt)
         const copy = article.querySelector('.lead-copy')
         if (!copy) return
@@ -639,12 +641,13 @@
         container.innerHTML = ''
         pageConfig.newsCards.forEach((item) => {
           if (!item) return
-          const article = document.createElement('article')
-          article.className = 'news-card'
-          article.appendChild(createIcon(item.iconClass))
-          article.appendChild(createTextElement('h3', '', item.title || '未命名资讯'))
-          article.appendChild(createTextElement('p', '', item.description || ''))
-          container.appendChild(article)
+          const card = document.createElement(item.href ? 'a' : 'article')
+          card.className = 'news-card'
+          if (item.href) card.href = resolveArticleHref(item.href)
+          card.appendChild(createIcon(item.iconClass))
+          card.appendChild(createTextElement('h3', '', item.title || '未命名资讯'))
+          card.appendChild(createTextElement('p', '', item.description || ''))
+          container.appendChild(card)
         })
       })
     }
@@ -654,7 +657,15 @@
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:3000'
     }
-    return 'https://docs.suxin.ai'
+    return 'https://suxin-docs.mintlify.site'
+  }
+
+  function resolveArticleHref(href) {
+    const value = String(href || '').trim()
+    if (!value) return '#'
+    if (/^(https?:|mailto:|tel:|#)/i.test(value)) return value
+    const path = value.replace(/^\/+/, '')
+    return path.startsWith('blog/') ? `${getDocsBaseUrl()}/${path}` : value
   }
 
   function getArticleIcon(category) {
@@ -672,9 +683,14 @@
       const articles = await response.json()
       if (!Array.isArray(articles) || !articles.length) return
 
+      const newsArticles = articles
+        .filter((item) => Array.isArray(item?.tags) && item.tags.includes('资讯中心'))
+        .slice(0, 8)
+      if (!newsArticles.length) return
+
       document.querySelectorAll('.list').forEach((container) => {
         container.innerHTML = ''
-        articles.forEach((item) => {
+        newsArticles.forEach((item) => {
           if (!item?.slug || !item?.title) return
           const link = document.createElement('a')
           link.className = 'news-card'
@@ -764,6 +780,13 @@
   function applyInvestorsPage(pageConfig) {
     applyHero(pageConfig)
 
+    const heroArticleHref = pageConfig.projectPhotos?.find((item) => item?.id === 'investment-park')?.href
+    if (heroArticleHref) {
+      document.querySelectorAll('.investor-hero-link').forEach((link) => {
+        link.setAttribute('href', resolveArticleHref(heroArticleHref))
+      })
+    }
+
     if (Array.isArray(pageConfig.investmentCards)) {
       document.querySelectorAll('.investor-focus-grid').forEach((container) => {
         container.innerHTML = ''
@@ -775,7 +798,7 @@
           article.appendChild(createTextElement('h2', '', card.title || '未命名方向'))
           article.appendChild(createTextElement('p', '', card.description || ''))
           const link = document.createElement('a')
-          link.href = card.href || '#intent'
+          link.href = resolveArticleHref(card.href || '#intent')
           link.append(document.createTextNode(card.linkLabel || '查看详情 '))
           link.appendChild(createIcon('ri-arrow-right-line'))
           article.appendChild(link)
@@ -793,8 +816,9 @@
         container.innerHTML = ''
         pageConfig.projectPhotos.forEach((item) => {
           if (!item) return
-          const article = document.createElement('article')
+          const article = document.createElement(item.href ? 'a' : 'article')
           article.className = item.featured ? 'investor-project featured' : 'investor-project'
+          if (item.href) article.href = resolveArticleHref(item.href)
           const image = document.createElement('img')
           setImage(image, item.imageSrc, item.imageAlt)
           const copy = document.createElement('div')

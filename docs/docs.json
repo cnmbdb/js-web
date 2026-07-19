@@ -19,9 +19,28 @@
       {
         "group": "博客文章",
         "pages": [
+          "blog/compute-landlord-steady-income",
           "blog/green-compute-operations",
+          "blog/gpu-hardware-investment-guide",
           "blog/data-center-hosting-stability",
-          "blog/enterprise-aigc-cost-analysis"
+          "blog/enterprise-aigc-cost-analysis",
+          "blog/data-center-asset-operations",
+          "blog/green-power-park-partnership",
+          "blog/green-park-project-milestones",
+          "blog/data-center-operations-capability",
+          "blog/gpu-capacity-procurement-checklist",
+          "blog/green-power-compute-cost-model",
+          "blog/compute-operations-review",
+          "blog/aigc-inference-capacity-planning",
+          "blog/case-shanghai-compute-cluster-delivery",
+          "blog/case-panjin-green-compute-park",
+          "blog/cross-border-compute-compliance",
+          "blog/case-green-park-contract-delivery",
+          "blog/case-hetian-green-power-hosting",
+          "blog/case-hetian-power-compute-operations",
+          "blog/case-local-business-aigc-efficiency",
+          "blog/case-ecommerce-mcn-compute-growth",
+          "blog/case-overseas-ai-short-drama-compute"
         ]
       }
     ],

@@ -22,7 +22,7 @@ import {
 } from './articles'
 import { uploadSiteImage } from './supabase'
 
-const categoryOptions = ['行业观察', '算力硬件与托管', '绿电园区共建', '企业AIGC应用', '跨境算力出海', '项目进展']
+const categoryOptions = ['行业观察', '投资人业务', '项目案例', '算力硬件与托管', '绿电园区共建', '企业AIGC应用', '跨境算力出海', '项目进展']
 const ArticlePreview = lazy(() => import('./ArticlePreview'))
 
 function formatDate(value: string) {
@@ -109,7 +109,13 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
         setDraft(result.article)
         setSelectedSlug(result.article.slug)
       }
-      setMessage(status === 'published' ? '文章已发布，Mintlify 导航和官网文章索引已同步。' : '草稿已保存到本地 MDX。')
+      setMessage(
+        status === 'published'
+          ? '文章已发布，Mintlify 导航和官网文章索引已同步。'
+          : import.meta.env.DEV
+            ? '草稿已保存到本地 MDX。'
+            : '草稿已保存到内容数据库。',
+      )
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '保存文章失败')
     } finally {
@@ -118,7 +124,10 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
   }
 
   const deleteCurrent = async () => {
-    if (!selectedSlug || !window.confirm(`确定删除“${draft.title}”吗？本地 MDX 文件会被移除。`)) return
+    const deletionEffect = import.meta.env.DEV
+      ? '本地 MDX 文件会被移除。'
+      : '已发布文章会同步从 GitHub 和 Mintlify 下线。'
+    if (!selectedSlug || !window.confirm(`确定删除“${draft.title}”吗？${deletionEffect}`)) return
     setIsSaving(true)
     setMessage('')
     setErrorMessage('')
@@ -153,12 +162,12 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <section className="article-studio" aria-label="博客与文档文章管理">
+    <section className="article-studio" aria-label="博客文章管理">
       <aside className="article-library panel">
         <div className="article-library-head">
           <div>
-            <span>CONTENT LIBRARY</span>
-            <h2>文章与文档</h2>
+            <span>BLOG LIBRARY</span>
+            <h2>博客文章</h2>
           </div>
           <button className="article-new-button" onClick={startNewArticle} type="button">
             <FilePlus2 size={16} /> 新建
@@ -280,7 +289,11 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
         )}
 
         <div className="article-editor-foot">
-          <span>本地模式会直接更新 docs/blog 下的 MDX 文件</span>
+          <span>
+            {import.meta.env.DEV
+              ? '本地模式会直接更新 docs/blog 下的 MDX 文件'
+              : '草稿保存到 Supabase，发布后同步 GitHub 并触发 Mintlify 部署'}
+          </span>
           <button className="article-delete-button" disabled={!selectedSlug || isSaving} onClick={() => void deleteCurrent()} type="button"><Trash2 size={15} /> 删除文章</button>
         </div>
       </article>

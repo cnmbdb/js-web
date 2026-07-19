@@ -1,4 +1,4 @@
-import { type ChangeEvent, type ReactNode, useEffect, useId, useMemo, useState } from 'react'
+import { type ChangeEvent, lazy, type ReactNode, Suspense, useEffect, useId, useMemo, useState } from 'react'
 import {
   type ColumnDef,
   type SortingState,
@@ -23,6 +23,7 @@ import {
   LoaderCircle,
   LogOut,
   MessageSquareText,
+  Newspaper,
   Save,
   Search,
   SquarePen,
@@ -31,12 +32,14 @@ import {
 } from 'lucide-react'
 
 import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage } from './supabase'
-import { ArticleManager } from './ArticleManager'
+
+const ArticleManager = lazy(() => import('./ArticleManager').then((module) => ({ default: module.ArticleManager })))
 
 type AdminSection =
   | 'navigation'
   | 'branding'
   | 'footer'
+  | 'blog'
   | 'pageHome'
   | 'pageAbout'
   | 'pageBusiness'
@@ -46,6 +49,8 @@ type AdminSection =
   | 'pageCooperation'
   | 'pageGallery'
   | 'pageInvestors'
+
+type ConfigSection = Exclude<AdminSection, 'blog'>
 
 type ConsultSubmissionField = {
   name: string
@@ -225,6 +230,7 @@ type FilterItem = {
 
 type CaseCardItem = {
   id: string
+  href: string
   tag: string
   corner: string
   imageSrc: string
@@ -236,6 +242,7 @@ type CaseCardItem = {
 }
 
 type NewsLeadConfig = {
+  href: string
   kicker: string
   title: string
   description: string
@@ -245,6 +252,7 @@ type NewsLeadConfig = {
 
 type NewsCardItem = {
   id: string
+  href: string
   title: string
   description: string
   iconClass: string
@@ -252,6 +260,7 @@ type NewsCardItem = {
 
 type PhotoCardItem = {
   id: string
+  href: string
   title: string
   description: string
   imageSrc: string
@@ -321,7 +330,7 @@ type EditableField = {
   options?: Array<{ label: string; value: string }>
 }
 
-type AdminFormState = Record<AdminSection, Record<string, FieldValue>>
+type AdminFormState = Record<ConfigSection, Record<string, FieldValue>>
 
 const SITE_CONFIG_KEY = 'suxin-site-config'
 const CONSULT_SUBMISSIONS_KEY = 'suxin-consult-submissions'
@@ -546,14 +555,14 @@ const defaultCaseFilters: Array<FilterItem> = [
 ]
 
 const defaultCaseCards: Array<CaseCardItem> = [
-  { id: 'case-1', tag: '05', corner: '2', imageSrc: 'assets/materials/case-1.png', imageAlt: '上海算力项目', title: '上海握藏算力项目：算力集群部署与运维交付', status: '签署案例', mutedStatus: false, highlighted: true },
-  { id: 'case-2', tag: '03', corner: '2', imageSrc: 'assets/materials/case-2.png', imageAlt: '绿电园区共建', title: '和丰源网荷储项目：绿电算力园区共建', status: '盘锦案例', mutedStatus: false, highlighted: true },
-  { id: 'case-3', tag: '03', corner: '3', imageSrc: 'assets/materials/case-3.png', imageAlt: '园区共建', title: '和丰源网荷储项目：绿电算力园区共建', status: '签署案例', mutedStatus: false, highlighted: true },
-  { id: 'case-4', tag: '03', corner: '4', imageSrc: 'assets/materials/case-4.png', imageAlt: '算力园区', title: '和田增量配电网算力园区：绿电直连与机房托管', status: '签署案例', mutedStatus: false, highlighted: true },
-  { id: 'case-5', tag: '02', corner: '3', imageSrc: 'assets/materials/case-5.png', imageAlt: '电力资源与算力运营', title: '和田增量配电网算力园区：电力资源与算力运营', status: '', mutedStatus: false, highlighted: false },
-  { id: 'case-6', tag: '03', corner: '4', imageSrc: 'assets/materials/case-6.png', imageAlt: '本地商家AIGC', title: '本地商家AIGC降本案例：内容生产与客服提效', status: '管理成果', mutedStatus: true, highlighted: false },
-  { id: 'case-7', tag: '03', corner: '5', imageSrc: 'assets/materials/case-7.png', imageAlt: '广告电商算力滴灌', title: '本地商家AIGC降本案例：广告电商MON算力滴灌', status: '', mutedStatus: false, highlighted: true },
-  { id: 'case-8', tag: '03', corner: '5', imageSrc: 'assets/materials/case-8.png', imageAlt: '海外算力服务', title: '跨境海外算力服务案例：海外AI平台与短剧算力', status: '', mutedStatus: false, highlighted: true },
+  { id: 'case-1', href: 'blog/case-shanghai-compute-cluster-delivery', tag: '05', corner: '2', imageSrc: 'assets/materials/case-1.png', imageAlt: '上海算力项目', title: '上海握藏算力项目：算力集群部署与运维交付', status: '签署案例', mutedStatus: false, highlighted: true },
+  { id: 'case-2', href: 'blog/case-panjin-green-compute-park', tag: '03', corner: '2', imageSrc: 'assets/materials/case-2.png', imageAlt: '绿电园区共建', title: '和丰源网荷储项目：绿电算力园区共建', status: '盘锦案例', mutedStatus: false, highlighted: true },
+  { id: 'case-3', href: 'blog/case-green-park-contract-delivery', tag: '03', corner: '3', imageSrc: 'assets/materials/case-3.png', imageAlt: '园区共建', title: '和丰源网荷储项目：签约落地与交付路径', status: '签署案例', mutedStatus: false, highlighted: true },
+  { id: 'case-4', href: 'blog/case-hetian-green-power-hosting', tag: '03', corner: '4', imageSrc: 'assets/materials/case-4.png', imageAlt: '算力园区', title: '和田增量配电网算力园区：绿电直连与机房托管', status: '签署案例', mutedStatus: false, highlighted: true },
+  { id: 'case-5', href: 'blog/case-hetian-power-compute-operations', tag: '02', corner: '3', imageSrc: 'assets/materials/case-5.png', imageAlt: '电力资源与算力运营', title: '和田增量配电网算力园区：电力资源与算力运营', status: '', mutedStatus: false, highlighted: false },
+  { id: 'case-6', href: 'blog/case-local-business-aigc-efficiency', tag: '03', corner: '4', imageSrc: 'assets/materials/case-6.png', imageAlt: '本地商家AIGC', title: '本地商家AIGC降本案例：内容生产与客服提效', status: '管理成果', mutedStatus: true, highlighted: false },
+  { id: 'case-7', href: 'blog/case-ecommerce-mcn-compute-growth', tag: '03', corner: '5', imageSrc: 'assets/materials/case-7.png', imageAlt: '广告电商算力滴灌', title: '本地商家AIGC降本案例：广告电商与MCN算力滴灌', status: '', mutedStatus: false, highlighted: true },
+  { id: 'case-8', href: 'blog/case-overseas-ai-short-drama-compute', tag: '03', corner: '5', imageSrc: 'assets/materials/case-8.png', imageAlt: '海外算力服务', title: '跨境海外算力服务案例：海外AI平台与短剧算力', status: '', mutedStatus: false, highlighted: true },
 ]
 
 const defaultCaseDownload: DownloadItem = {
@@ -568,6 +577,7 @@ const defaultNewsHero: PageHeroConfig = {
 }
 
 const defaultNewsLead: NewsLeadConfig = {
+  href: 'blog/green-compute-operations',
   kicker: '行业观察',
   title: '绿色算力基础设施进入精细化运营阶段',
   description: '围绕GPU硬件、机房托管、绿电资源、项目交付与企业AIGC降本，速芯算力持续整理行业动态、政策方向与场景方法。',
@@ -586,9 +596,14 @@ const defaultNewsTopics: IconLinkSectionConfig = {
 }
 
 const defaultNewsCards: Array<NewsCardItem> = [
-  { id: 'hosting-stability', title: '智算机房托管如何评估稳定性', description: '从电力、散热、网络、运维响应与资产安全五个维度建立考察清单。', iconClass: 'ri-server-line' },
-  { id: 'aigc-cost', title: '企业AIGC降本测算思路', description: '结合内容生产、客服、设计、投放与质检场景拆分算力需求。', iconClass: 'ri-line-chart-line' },
-  { id: 'park-steps', title: '园区共建项目的合作节点', description: '梳理从资源评估、方案测算、机房建设到渠道招商的推进路径。', iconClass: 'ri-building-4-line' },
+  { id: 'hosting-stability', href: 'blog/data-center-hosting-stability', title: '智算机房托管如何评估稳定性', description: '从电力、散热、网络、运维响应与资产安全五个维度建立考察清单。', iconClass: 'ri-server-line' },
+  { id: 'aigc-cost', href: 'blog/enterprise-aigc-cost-analysis', title: '企业AIGC降本测算思路', description: '结合内容生产、客服、设计、投放与质检场景拆分算力需求。', iconClass: 'ri-line-chart-line' },
+  { id: 'park-steps', href: 'blog/green-park-project-milestones', title: '园区共建项目的合作节点', description: '梳理从资源评估、方案测算、机房建设到渠道招商的推进路径。', iconClass: 'ri-building-4-line' },
+  { id: 'gpu-procurement', href: 'blog/gpu-capacity-procurement-checklist', title: '企业采购GPU算力前要确认的七项指标', description: '把显存、精度、并发、网络、交付周期与运维边界纳入同一张采购清单。', iconClass: 'ri-cpu-line' },
+  { id: 'green-cost-model', href: 'blog/green-power-compute-cost-model', title: '绿电算力成本模型：电价、PUE与利用率如何联动', description: '用全生命周期口径理解电力成本、制冷损耗与设备利用率之间的关系。', iconClass: 'ri-leaf-line' },
+  { id: 'inference-planning', href: 'blog/aigc-inference-capacity-planning', title: '企业AIGC推理容量规划：从业务峰值反推算力', description: '通过请求量、响应时间、上下文与峰谷分布，确定更合适的推理资源。', iconClass: 'ri-magic-line' },
+  { id: 'cross-border-compliance', href: 'blog/cross-border-compute-compliance', title: '跨境算力出海：网络、合规与交付边界', description: '在海外算力项目启动前，先厘清数据、链路、服务区域和责任边界。', iconClass: 'ri-global-line' },
+  { id: 'industry-observation', href: 'blog/green-compute-operations', title: '绿色算力基础设施进入精细化运营阶段', description: '从设备供给走向能源效率、稳定交付与持续运营，理解算力基础设施的新阶段。', iconClass: 'ri-bar-chart-box-line' },
 ]
 
 const defaultCooperationHero: PageHeroConfig = {
@@ -650,12 +665,12 @@ const defaultGalleryHero: PageHeroConfig = {
 }
 
 const defaultGalleryPhotos: Array<PhotoCardItem> = [
-  { id: 'server-room', title: '智算机房托管区', description: '标准化机柜、供配电、网络与运维动线实景。', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房', featured: true },
-  { id: 'green-park', title: '绿电园区航拍', description: '园区资源与算力基础设施协同建设场景。', imageSrc: 'assets/materials/factory-aerial.png', imageAlt: '绿电园区航拍', featured: false },
-  { id: 'gpu-hardware', title: 'GPU算力硬件', description: '面向企业AIGC、视觉、渲染与推理任务。', imageSrc: 'assets/materials/hero-chip.png', imageAlt: 'GPU算力硬件', featured: false },
-  { id: 'grid-floor', title: '机房地板与线缆', description: '高密度部署下的布线与散热空间。', imageSrc: 'assets/materials/grid-floor.png', imageAlt: '机房地板与线缆', featured: false },
-  { id: 'certificates', title: '项目资质材料', description: '合作考察、渠道招商与园区对接资料。', imageSrc: 'assets/materials/certificates.png', imageAlt: '资质文件', featured: false },
-  { id: 'delivery-team', title: '交付与运维团队', description: '从方案测算、设备交付到现场运维的协作支持。', imageSrc: 'assets/materials/team-portraits.png', imageAlt: '交付团队', featured: true },
+  { id: 'server-room', href: '', title: '智算机房托管区', description: '标准化机柜、供配电、网络与运维动线实景。', imageSrc: 'assets/materials/server-room.png', imageAlt: '绿色智算机房', featured: true },
+  { id: 'green-park', href: '', title: '绿电园区航拍', description: '园区资源与算力基础设施协同建设场景。', imageSrc: 'assets/materials/factory-aerial.png', imageAlt: '绿电园区航拍', featured: false },
+  { id: 'gpu-hardware', href: '', title: 'GPU算力硬件', description: '面向企业AIGC、视觉、渲染与推理任务。', imageSrc: 'assets/materials/hero-chip.png', imageAlt: 'GPU算力硬件', featured: false },
+  { id: 'grid-floor', href: '', title: '机房地板与线缆', description: '高密度部署下的布线与散热空间。', imageSrc: 'assets/materials/grid-floor.png', imageAlt: '机房地板与线缆', featured: false },
+  { id: 'certificates', href: '', title: '项目资质材料', description: '合作考察、渠道招商与园区对接资料。', imageSrc: 'assets/materials/certificates.png', imageAlt: '资质文件', featured: false },
+  { id: 'delivery-team', href: '', title: '交付与运维团队', description: '从方案测算、设备交付到现场运维的协作支持。', imageSrc: 'assets/materials/team-portraits.png', imageAlt: '交付团队', featured: true },
 ]
 
 const defaultInvestorsHero: PageHeroConfig = {
@@ -664,15 +679,15 @@ const defaultInvestorsHero: PageHeroConfig = {
 }
 
 const defaultInvestmentCards: Array<BusinessCardItem> = [
-  { id: 'hardware-investment', title: '算力硬件投资', description: '围绕 GPU 服务器、整机集群与交付周期，匹配采购、托管和运营方案。', href: '#intent', linkLabel: '了解合作方式', iconClass: 'ri-cpu-line' },
-  { id: 'data-center-operation', title: '智算机房资产运营', description: '从机柜资源、供配电与网络能力到运维响应，建立可持续的资产运营路径。', href: '#intent', linkLabel: '查看运营方案', iconClass: 'ri-server-line' },
-  { id: 'green-park-partnership', title: '绿电园区共建', description: '结合园区资源、绿电条件与算力需求，推进项目测算、建设和长期运营。', href: '#intent', linkLabel: '发起项目对接', iconClass: 'ri-building-4-line' },
+  { id: 'hardware-investment', title: '算力硬件投资', description: '围绕 GPU 服务器、整机集群与交付周期，匹配采购、托管和运营方案。', href: 'blog/gpu-hardware-investment-guide', linkLabel: '阅读投资指南', iconClass: 'ri-cpu-line' },
+  { id: 'data-center-operation', title: '智算机房资产运营', description: '从机柜资源、供配电与网络能力到运维响应，建立可持续的资产运营路径。', href: 'blog/data-center-asset-operations', linkLabel: '阅读运营方案', iconClass: 'ri-server-line' },
+  { id: 'green-park-partnership', title: '绿电园区共建', description: '结合园区资源、绿电条件与算力需求，推进项目测算、建设和长期运营。', href: 'blog/green-power-park-partnership', linkLabel: '阅读共建指南', iconClass: 'ri-building-4-line' },
 ]
 
 const defaultInvestorPhotos: Array<PhotoCardItem> = [
-  { id: 'investment-park', title: '园区资源评估', description: '围绕区位、电力、网络与建设条件进行项目基础筛选。', imageSrc: 'assets/materials/factory-aerial.png', imageAlt: '绿电园区航拍', featured: true },
-  { id: 'investment-room', title: '机房运营能力', description: '标准化机房环境、基础设施和日常运维支持。', imageSrc: 'assets/materials/server-room.png', imageAlt: '智算机房', featured: false },
-  { id: 'investment-dashboard', title: '运营数据复盘', description: '以项目进度、资产状态和合作节点支持持续沟通。', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '运营数据面板', featured: false },
+  { id: 'investment-park', href: 'blog/compute-landlord-steady-income', title: '园区资源评估', description: '围绕区位、电力、网络与建设条件进行项目基础筛选。', imageSrc: 'assets/materials/factory-aerial.png', imageAlt: '绿电园区航拍', featured: true },
+  { id: 'investment-room', href: 'blog/data-center-operations-capability', title: '机房运营能力', description: '标准化机房环境、基础设施和日常运维支持。', imageSrc: 'assets/materials/server-room.png', imageAlt: '智算机房', featured: false },
+  { id: 'investment-dashboard', href: 'blog/compute-operations-review', title: '运营数据复盘', description: '以项目进度、资产状态和合作节点支持持续沟通。', imageSrc: 'assets/materials/dashboard-panel.png', imageAlt: '运营数据面板', featured: false },
 ]
 
 const defaultInvestorProcess: LabelListConfig = {
@@ -734,6 +749,7 @@ const legacyPageHeroDefaults: Partial<Record<AdminSection, PageHeroConfig>> = {
 const topNav: Array<{ label: string; section: AdminSection }> = [
   { label: '导航设置', section: 'navigation' },
   { label: '页面设置', section: 'pageHome' },
+  { label: '博客管理', section: 'blog' },
   { label: '页脚配置', section: 'footer' },
 ]
 
@@ -741,6 +757,10 @@ const primaryNav = [
   { label: '导航设置', icon: GalleryVerticalEnd, section: 'navigation' },
   { label: 'Logo / 标题 Logo', icon: Image, section: 'branding' },
   { label: '页脚配置区块', icon: FileText, section: 'footer' },
+] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
+
+const contentNav = [
+  { label: '博客管理', icon: Newspaper, section: 'blog' },
 ] satisfies Array<{ label: string; icon: typeof LayoutDashboard; section: AdminSection }>
 
 const pageNav = [
@@ -799,6 +819,21 @@ const modules: Record<AdminSection, ModuleConfig> = {
       { title: '底部导航列', meta: '页面链接与栏目排序', state: '已发布' },
       { title: '企业联系信息', meta: '地址、电话、邮箱、二维码占位', state: '待复核' },
       { title: '备案与版权', meta: '页脚底栏固定信息', state: '已发布' },
+    ],
+  },
+  blog: {
+    id: 'blog',
+    title: '博客管理',
+    description: '集中管理博客文章、草稿、预览和 Mintlify 发布。',
+    stats: [
+      { label: '内容源', value: 'MDX', note: 'docs/blog' },
+      { label: '发布目标', value: 'Mintlify', note: 'GitHub 自动部署' },
+      { label: '管理模式', value: '独立模块', note: '不依附页面配置' },
+    ],
+    items: [
+      { title: '文章库', meta: '搜索、筛选和选择文章', state: '使用中' },
+      { title: '文章编辑器', meta: '草稿、预览与封面管理', state: '使用中' },
+      { title: '发布工作流', meta: 'GitHub 提交并触发 Mintlify', state: '已接通' },
     ],
   },
   pageHome: {
@@ -1054,7 +1089,7 @@ const casesBlockFields: Array<EditableField> = [
     label: '案例卡片',
     type: 'case-cards',
     defaultValue: defaultCaseCards,
-    hint: '对应案例页 8 张案例卡：标签、角标、图片、标题和状态',
+    hint: '对应案例页 8 张案例卡：标签、角标、图片、标题、状态和文章链接',
   },
   {
     id: 'downloadCta',
@@ -1086,7 +1121,7 @@ const newsBlockFields: Array<EditableField> = [
     label: '资讯卡片',
     type: 'news-cards',
     defaultValue: defaultNewsCards,
-    hint: '对应资讯页下方 3 张资讯卡片',
+    hint: '对应资讯页下方 8 张资讯卡片，每张可跳转到独立文章',
   },
 ]
 
@@ -1151,7 +1186,7 @@ const investorsBlockFields: Array<EditableField> = [
   },
 ]
 
-const editableSections: Record<AdminSection, { title: string; fields: Array<EditableField> }> = {
+const editableSections: Record<ConfigSection, { title: string; fields: Array<EditableField> }> = {
   navigation: {
     title: '导航配置',
     fields: [
@@ -1337,7 +1372,7 @@ function isRecordValue(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function migrateLegacyPageSection(section: Record<string, FieldValue> | undefined, sectionId: AdminSection) {
+function migrateLegacyPageSection(section: Record<string, FieldValue> | undefined, sectionId: ConfigSection) {
   if (!section) {
     return section
   }
@@ -1403,7 +1438,7 @@ function mergeFormState(
     'pageCooperation',
     'pageGallery',
     'pageInvestors',
-  ] as Array<AdminSection>).forEach((section) => {
+  ] as Array<ConfigSection>).forEach((section) => {
     savedSections[section] = migrateLegacyPageSection(
       savedSections[section] as Record<string, FieldValue> | undefined,
       section,
@@ -1416,7 +1451,7 @@ function mergeFormState(
       {
         ...values,
         ...(section === 'pageHome' ? (savedSections.blocks ?? {}) : {}),
-        ...(savedSections[section as AdminSection] ?? {}),
+        ...(savedSections[section as ConfigSection] ?? {}),
       },
     ]),
   ) as AdminFormState
@@ -1653,7 +1688,7 @@ export function AdminDashboard({
     setIsMobileMenuOpen(false)
   }
 
-  const updateConfigField = (section: AdminSection, fieldId: string, value: FieldValue) => {
+  const updateConfigField = (section: ConfigSection, fieldId: string, value: FieldValue) => {
     setConfigState((current) => ({
       ...current,
       [section]: {
@@ -1739,6 +1774,13 @@ export function AdminDashboard({
           onSelect={selectSection}
         />
 
+        <p className="nav-group">内容管理</p>
+        <SidebarNav
+          activeSection={activeSection}
+          items={contentNav}
+          onSelect={selectSection}
+        />
+
         <p className="nav-group">页面设置</p>
         <SidebarNav
           activeSection={activeSection}
@@ -1755,7 +1797,7 @@ export function AdminDashboard({
       <section className="workspace">
         <ModulePage
           activeSection={activeSection}
-          formValues={configState[activeSection]}
+          formValues={activeSection === 'blog' ? undefined : configState[activeSection]}
           isDirty={isDirty}
           isPublishing={isPublishing}
           isRemoteLoading={isRemoteLoading}
@@ -1797,6 +1839,9 @@ function MobileMenu({
 
         <p className="nav-group">配置管理</p>
         <SidebarNav activeSection={activeSection} items={primaryNav} onSelect={onSelect} />
+
+        <p className="nav-group">内容管理</p>
+        <SidebarNav activeSection={activeSection} items={contentNav} onSelect={onSelect} />
 
         <p className="nav-group">页面设置</p>
         <SidebarNav activeSection={activeSection} items={pageNav} onSelect={onSelect} />
@@ -1875,11 +1920,11 @@ function ModulePage({
   userEmail,
 }: {
   activeSection: AdminSection
-  formValues: Record<string, FieldValue>
+  formValues: Record<string, FieldValue> | undefined
   isDirty: boolean
   isPublishing: boolean
   isRemoteLoading: boolean
-  onConfigChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
+  onConfigChange: (section: ConfigSection, fieldId: string, value: FieldValue) => void
   onPublish: () => void
   publishedAt: string
   publishError: string
@@ -1892,11 +1937,19 @@ function ModulePage({
   setSubmissionView: (view: '全部' | '方案测算' | '考察预约') => void
   userEmail: string
 }) {
+  if (activeSection === 'blog') {
+    return (
+      <Suspense fallback={<div className="panel article-empty"><LoaderCircle className="spin" size={18} /> 正在加载博客管理</div>}>
+        <ArticleManager userEmail={userEmail} />
+      </Suspense>
+    )
+  }
+
   return (
     <>
       <ConfigEditor
         activeSection={activeSection}
-        formValues={formValues}
+        formValues={formValues ?? {}}
         isDirty={isDirty}
         isPublishing={isPublishing}
         isRemoteLoading={isRemoteLoading}
@@ -1919,8 +1972,6 @@ function ModulePage({
           />
         </section>
       ) : null}
-
-      {activeSection === 'pageNews' ? <ArticleManager userEmail={userEmail} /> : null}
     </>
   )
 }
@@ -1936,12 +1987,12 @@ function ConfigEditor({
   publishedAt,
   publishError,
 }: {
-  activeSection: AdminSection
+  activeSection: ConfigSection
   formValues: Record<string, FieldValue>
   isDirty: boolean
   isPublishing: boolean
   isRemoteLoading: boolean
-  onChange: (section: AdminSection, fieldId: string, value: FieldValue) => void
+  onChange: (section: ConfigSection, fieldId: string, value: FieldValue) => void
   onPublish: () => void
   publishedAt: string
   publishError: string
@@ -3627,6 +3678,7 @@ function CaseCardsEditor({
       ...value,
       {
         id: makeEditorId('case'),
+        href: '',
         tag: '01',
         corner: String(value.length + 1),
         imageSrc: 'assets/materials/case-1.png',
@@ -3684,6 +3736,14 @@ function CaseCardsEditor({
               <span>案例标题</span>
               <textarea value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
             </label>
+            <label className="menu-cell span-2">
+              <span>文章链接</span>
+              <input
+                placeholder="blog/article-slug"
+                value={item.href || ''}
+                onChange={(event) => updateItem(item.id, { href: event.target.value })}
+              />
+            </label>
             <label className="menu-cell">
               <span>状态文案</span>
               <input value={item.status} onChange={(event) => updateItem(item.id, { status: event.target.value })} />
@@ -3728,6 +3788,14 @@ function NewsLeadEditor({
           <span>摘要</span>
           <textarea value={value.description} onChange={(event) => onChange({ ...value, description: event.target.value })} />
         </label>
+        <label className="menu-cell span-2">
+          <span>文章链接</span>
+          <input
+            placeholder="blog/article-slug"
+            value={value.href || ''}
+            onChange={(event) => onChange({ ...value, href: event.target.value })}
+          />
+        </label>
         <ImageUploadField
           label="资讯主图"
           onChange={(imageSrc) => onChange({ ...value, imageSrc })}
@@ -3752,7 +3820,7 @@ function NewsCardsEditor({
   onChange: (value: Array<NewsCardItem>) => void
 }) {
   const addItem = () => {
-    onChange([...value, { id: makeEditorId('news'), title: `新资讯 ${value.length + 1}`, description: '补充资讯摘要', iconClass: 'ri-file-list-3-line' }])
+    onChange([...value, { id: makeEditorId('news'), href: '', title: `新资讯 ${value.length + 1}`, description: '补充资讯摘要', iconClass: 'ri-file-list-3-line' }])
   }
 
   const updateItem = (id: string, patch: Partial<NewsCardItem>) => {
@@ -3788,6 +3856,14 @@ function NewsCardsEditor({
               <input value={item.iconClass} onChange={(event) => updateItem(item.id, { iconClass: event.target.value })} />
             </label>
             <label className="menu-cell">
+              <span>文章链接</span>
+              <input
+                placeholder="blog/article-slug"
+                value={item.href || ''}
+                onChange={(event) => updateItem(item.id, { href: event.target.value })}
+              />
+            </label>
+            <label className="menu-cell">
               <span>摘要</span>
               <textarea value={item.description} onChange={(event) => updateItem(item.id, { description: event.target.value })} />
             </label>
@@ -3812,6 +3888,7 @@ function PhotoCardsEditor({
       ...value,
       {
         id: makeEditorId('photo'),
+        href: '',
         title: `新图片 ${value.length + 1}`,
         description: '补充图片说明',
         imageSrc: 'assets/materials/server-room.png',
@@ -3857,6 +3934,14 @@ function PhotoCardsEditor({
             <label className="menu-cell">
               <span>图片说明</span>
               <input value={item.imageAlt} onChange={(event) => updateItem(item.id, { imageAlt: event.target.value })} />
+            </label>
+            <label className="menu-cell">
+              <span>文章链接（可选）</span>
+              <input
+                placeholder="blog/article-slug"
+                value={item.href || ''}
+                onChange={(event) => updateItem(item.id, { href: event.target.value })}
+              />
             </label>
             <label className="menu-visible">
               <input checked={item.featured} onChange={(event) => updateItem(item.id, { featured: event.target.checked })} type="checkbox" />

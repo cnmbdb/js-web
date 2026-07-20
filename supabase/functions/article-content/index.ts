@@ -36,6 +36,26 @@ type DraftRow = {
   body_mdx: string
 }
 
+type PublishStage =
+  | 'auth'
+  | 'database'
+  | 'github-read'
+  | 'github-write'
+  | 'github-delete'
+  | 'navigation'
+  | 'response'
+  | 'validation'
+
+class GitHubApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'GitHubApiError'
+    this.status = status
+  }
+}
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
@@ -97,8 +117,27 @@ async function githubRequest(path: string, init: RequestInit = {}) {
     },
   })
   const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(data.message || `GitHub HTTP ${response.status}`)
+  if (!response.ok) throw new GitHubApiError(response.status, data.message || `GitHub HTTP ${response.status}`)
   return data
+}
+
+function publicErrorMessage(error: unknown) {
+  if (error instanceof GitHubApiError) {
+    if (error.status === 401) {
+      return 'GitHub 发布凭据已失效，请更新 Supabase Edge Function 的 GITHUB_TOKEN'
+    }
+    if (error.status === 403) {
+      return 'GitHub 拒绝发布请求，请确认 Token 对 cnmbdb/js-web 拥有 Contents: Read and write 权限，且未触发 API 限流'
+    }
+    if (error.status === 404) {
+      return 'GitHub Token 无法访问目标仓库，请确认 Fine-grained Token 已授权 cnmbdb/js-web'
+    }
+    if (error.status === 409) {
+      return 'GitHub 分支刚刚发生变化，请重新点击发布文章'
+    }
+    return `GitHub 发布失败（HTTP ${error.status}）：${error.message}`
+  }
+  return error instanceof Error ? error.message : '文章服务执行失败'
 }
 
 async function readGithubFile(path: string) {
@@ -107,33 +146,47 @@ async function readGithubFile(path: string) {
     const data = await githubRequest(`/contents/${path}?ref=${encodeURIComponent(branch)}`)
     return { content: decodeBase64(data.content), sha: String(data.sha) }
   } catch (error) {
-    if (error instanceof Error && error.message === 'Not Found') return null
+    if (error instanceof GitHubApiError && error.status === 404) return null
     throw error
   }
 }
 
 async function writeGithubFile(path: string, content: string, message: string) {
   const settings = githubSettings()
-  const current = await readGithubFile(path)
-  return githubRequest(`/contents/${path}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      message,
-      content: encodeBase64(content),
-      branch: settings.branch,
-      ...(current?.sha ? { sha: current.sha } : {}),
-    }),
-  })
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const current = await readGithubFile(path)
+    try {
+      return await githubRequest(`/contents/${path}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message,
+          content: encodeBase64(content),
+          branch: settings.branch,
+          ...(current?.sha ? { sha: current.sha } : {}),
+        }),
+      })
+    } catch (error) {
+      if (!(error instanceof GitHubApiError) || error.status !== 409 || attempt === 3) throw error
+    }
+  }
+  throw new Error('GitHub 文件写入失败')
 }
 
 async function deleteGithubFile(path: string, message: string) {
   const settings = githubSettings()
-  const current = await readGithubFile(path)
-  if (!current) return
-  await githubRequest(`/contents/${path}`, {
-    method: 'DELETE',
-    body: JSON.stringify({ message, sha: current.sha, branch: settings.branch }),
-  })
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const current = await readGithubFile(path)
+    if (!current) return
+    try {
+      await githubRequest(`/contents/${path}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ message, sha: current.sha, branch: settings.branch }),
+      })
+      return
+    } catch (error) {
+      if (!(error instanceof GitHubApiError) || error.status !== 409 || attempt === 3) throw error
+    }
+  }
 }
 
 function serializeArticle(article: Article) {
@@ -181,6 +234,10 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
+  let action = ''
+  let articleSlug = ''
+  let stage: PublishStage = 'auth'
+
   try {
     const authorization = request.headers.get('Authorization') || ''
     const token = authorization.replace(/^Bearer\s+/i, '')
@@ -205,14 +262,18 @@ Deno.serve(async (request) => {
     if (!membership) return json({ error: '当前账号没有文章管理权限' }, 403)
 
     const body = await request.json()
+    action = String(body.action || '')
     if (body.action === 'list') {
+      stage = 'database'
       const { data, error } = await client.from('article_drafts').select('*').order('updated_at', { ascending: false })
       if (error) throw error
       return json({ articles: (data || []).map((row) => fromRow(row as DraftRow)) })
     }
 
     if (body.action === 'save') {
+      stage = 'validation'
       const article = body.article as Article
+      articleSlug = String(article?.slug || '')
       const previousSlug = String(body.previousSlug || '')
       if (!article || !slugPattern.test(article.slug)) throw new Error('Slug 格式不正确')
       if (!article.title?.trim() || !article.description?.trim() || !article.body?.trim()) {
@@ -228,6 +289,7 @@ Deno.serve(async (request) => {
       }
 
       const previousArticleSlug = previousSlug || nextArticle.slug
+      stage = 'database'
       const { data: previousArticle, error: previousArticleError } = await client
         .from('article_drafts')
         .select('status')
@@ -237,6 +299,7 @@ Deno.serve(async (request) => {
 
       let commitSha: string | null = null
       if (nextArticle.status === 'published') {
+        stage = 'github-write'
         const result = await writeGithubFile(
           `docs/blog/${nextArticle.slug}.mdx`,
           serializeArticle(nextArticle),
@@ -244,12 +307,15 @@ Deno.serve(async (request) => {
         )
         commitSha = result.commit?.sha || null
         if (previousSlug && previousSlug !== nextArticle.slug && slugPattern.test(previousSlug)) {
+          stage = 'github-delete'
           await deleteGithubFile(`docs/blog/${previousSlug}.mdx`, `Rename article: ${previousSlug} to ${nextArticle.slug}`)
         }
       } else if (previousArticle?.status === 'published') {
+        stage = 'github-delete'
         await deleteGithubFile(`docs/blog/${previousArticleSlug}.mdx`, `Unpublish article: ${previousArticleSlug}`)
       }
 
+      stage = 'database'
       const { error } = await client.from('article_drafts').upsert({
         slug: nextArticle.slug,
         title: nextArticle.title,
@@ -273,23 +339,36 @@ Deno.serve(async (request) => {
         await client.from('article_drafts').delete().eq('slug', previousSlug)
       }
       if (nextArticle.status === 'published' || previousArticle?.status === 'published') {
+        stage = 'navigation'
         await syncGithubNavigation(client)
       }
 
+      stage = 'response'
       const { data: rows, error: listError } = await client.from('article_drafts').select('*').order('updated_at', { ascending: false })
       if (listError) throw listError
       return json({ article: nextArticle, articles: (rows || []).map((row) => fromRow(row as DraftRow)) })
     }
 
     if (body.action === 'delete') {
+      stage = 'validation'
       const slug = String(body.slug || '')
+      articleSlug = slug
       if (!slugPattern.test(slug)) throw new Error('Slug 格式不正确')
+      stage = 'database'
       const { data: current, error: currentError } = await client.from('article_drafts').select('status').eq('slug', slug).maybeSingle()
       if (currentError) throw currentError
-      if (current?.status === 'published') await deleteGithubFile(`docs/blog/${slug}.mdx`, `Delete article: ${slug}`)
+      if (current?.status === 'published') {
+        stage = 'github-delete'
+        await deleteGithubFile(`docs/blog/${slug}.mdx`, `Delete article: ${slug}`)
+      }
+      stage = 'database'
       const { error } = await client.from('article_drafts').delete().eq('slug', slug)
       if (error) throw error
-      if (current?.status === 'published') await syncGithubNavigation(client)
+      if (current?.status === 'published') {
+        stage = 'navigation'
+        await syncGithubNavigation(client)
+      }
+      stage = 'response'
       const { data: rows, error: listError } = await client.from('article_drafts').select('*').order('updated_at', { ascending: false })
       if (listError) throw listError
       return json({ articles: (rows || []).map((row) => fromRow(row as DraftRow)) })
@@ -297,6 +376,14 @@ Deno.serve(async (request) => {
 
     return json({ error: '未知的文章操作' }, 400)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : '文章服务执行失败' }, 400)
+    const message = publicErrorMessage(error)
+    console.error(JSON.stringify({
+      event: 'article-content-error',
+      action,
+      slug: articleSlug,
+      stage,
+      message,
+    }))
+    return json({ error: message, stage }, 400)
   }
 })

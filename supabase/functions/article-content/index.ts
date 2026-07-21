@@ -59,6 +59,33 @@ class GitHubApiError extends Error {
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' }
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
+function normalizeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function shortTitleHash(value: string) {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36).slice(0, 6)
+}
+
+function createArticleSlug(title: string) {
+  const normalizedTitle = title.trim()
+  if (!normalizedTitle) return ''
+  const asciiSlug = normalizeSlug(normalizedTitle)
+  if (/[^\x00-\x7F]/.test(normalizedTitle)) {
+    return `${asciiSlug || 'article'}-${shortTitleHash(normalizedTitle)}`
+  }
+  return asciiSlug
+}
+
 function json(value: unknown, status = 200) {
   return new Response(JSON.stringify(value), { status, headers: jsonHeaders })
 }
@@ -273,16 +300,20 @@ Deno.serve(async (request) => {
     if (body.action === 'save') {
       stage = 'validation'
       const article = body.article as Article
-      articleSlug = String(article?.slug || '')
       const previousSlug = String(body.previousSlug || '')
-      if (!article || !slugPattern.test(article.slug)) throw new Error('Slug 格式不正确')
+      if (!article) throw new Error('文章内容不完整')
       if (!article.title?.trim() || !article.description?.trim() || !article.body?.trim()) {
         throw new Error('标题、摘要和正文不能为空')
       }
 
+      const resolvedSlug = normalizeSlug(article.slug || '') || createArticleSlug(article.title)
+      articleSlug = resolvedSlug
+      if (!slugPattern.test(resolvedSlug)) throw new Error('Slug 生成失败，请使用英文字母、数字和连字符')
+
       const today = currentShanghaiDate()
       const nextArticle: Article = {
         ...article,
+        slug: resolvedSlug,
         status: article.status === 'published' ? 'published' : 'draft',
         publishedAt: article.status === 'published' ? article.publishedAt || today : article.publishedAt,
         updatedAt: today,
@@ -296,6 +327,18 @@ Deno.serve(async (request) => {
         .eq('slug', previousArticleSlug)
         .maybeSingle()
       if (previousArticleError) throw previousArticleError
+      if (!previousSlug && previousArticle) {
+        throw new Error(`Slug ${nextArticle.slug} 已被其他文章使用`)
+      }
+      if (previousSlug && previousSlug !== nextArticle.slug) {
+        const { data: conflictingArticle, error: conflictingArticleError } = await client
+          .from('article_drafts')
+          .select('slug')
+          .eq('slug', nextArticle.slug)
+          .maybeSingle()
+        if (conflictingArticleError) throw conflictingArticleError
+        if (conflictingArticle) throw new Error(`Slug ${nextArticle.slug} 已被其他文章使用`)
+      }
 
       let commitSha: string | null = null
       if (nextArticle.status === 'published') {

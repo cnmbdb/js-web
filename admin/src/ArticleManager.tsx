@@ -30,6 +30,39 @@ function formatDate(value: string) {
   return new Date(`${value}T00:00:00`).toLocaleDateString('zh-CN')
 }
 
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+
+function sanitizeSlugInput(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+/g, '')
+}
+
+function normalizeSlug(value: string) {
+  return sanitizeSlugInput(value).replace(/-+$/g, '')
+}
+
+function shortTitleHash(value: string) {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(36).slice(0, 6)
+}
+
+function createArticleSlug(title: string) {
+  const normalizedTitle = title.trim()
+  if (!normalizedTitle) return ''
+  const asciiSlug = normalizeSlug(normalizedTitle)
+  if (/[^\x00-\x7F]/.test(normalizedTitle)) {
+    return `${asciiSlug || 'article'}-${shortTitleHash(normalizedTitle)}`
+  }
+  return asciiSlug
+}
+
 export function ArticleManager({ userEmail }: { userEmail: string }) {
   const [articles, setArticles] = useState<Array<Article>>([])
   const [selectedSlug, setSelectedSlug] = useState('')
@@ -82,6 +115,20 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
     setErrorMessage('')
   }
 
+  const updateTitle = (title: string) => {
+    setDraft((current) => {
+      const currentAutomaticSlug = createArticleSlug(current.title)
+      const shouldUpdateSlug = !selectedSlug && (!current.slug || normalizeSlug(current.slug) === currentAutomaticSlug)
+      return {
+        ...current,
+        title,
+        slug: shouldUpdateSlug ? createArticleSlug(title) : current.slug,
+      }
+    })
+    setMessage('')
+    setErrorMessage('')
+  }
+
   const selectArticle = (article: Article) => {
     setSelectedSlug(article.slug)
     setDraft(article)
@@ -99,11 +146,32 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
   }
 
   const persist = async (status: ArticleStatus) => {
-    setIsSaving(true)
     setMessage('')
     setErrorMessage('')
+    if (!draft.title.trim() || !draft.description.trim() || !draft.body.trim()) {
+      setErrorMessage('请先填写文章标题、摘要和正文')
+      return
+    }
+
+    const resolvedSlug = normalizeSlug(draft.slug) || createArticleSlug(draft.title)
+    if (!slugPattern.test(resolvedSlug)) {
+      setErrorMessage('Slug 生成失败，请在编辑页填写英文字母、数字或连字符')
+      setView('edit')
+      return
+    }
+
+    const conflictingArticle = articles.find((article) => article.slug === resolvedSlug && article.slug !== selectedSlug)
+    if (conflictingArticle) {
+      setErrorMessage(`文章链接 /blog/${resolvedSlug} 已被「${conflictingArticle.title}」使用，请修改 Slug`)
+      setView('edit')
+      return
+    }
+
+    const nextDraft = { ...draft, slug: resolvedSlug }
+    setDraft(nextDraft)
+    setIsSaving(true)
     try {
-      const result = await saveArticle({ ...draft, status }, selectedSlug)
+      const result = await saveArticle({ ...nextDraft, status }, selectedSlug)
       setArticles(result.articles)
       if (result.article) {
         setDraft(result.article)
@@ -228,12 +296,17 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
           <div className="article-edit-form">
             <label className="article-field span-2">
               <span>文章标题</span>
-              <input onChange={(event) => updateDraft('title', event.target.value)} placeholder="输入文章标题" value={draft.title} />
+              <input onChange={(event) => updateTitle(event.target.value)} placeholder="输入文章标题" value={draft.title} />
             </label>
             <label className="article-field">
               <span>Slug</span>
-              <input onChange={(event) => updateDraft('slug', event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} placeholder="green-compute-report" value={draft.slug} />
-              <small>仅限小写字母、数字和连字符</small>
+              <input
+                onBlur={() => updateDraft('slug', normalizeSlug(draft.slug) || createArticleSlug(draft.title))}
+                onChange={(event) => updateDraft('slug', sanitizeSlugInput(event.target.value))}
+                placeholder="留空时根据文章标题自动生成"
+                value={draft.slug}
+              />
+              <small>{draft.slug ? `文章链接：/blog/${normalizeSlug(draft.slug)}` : '留空也可以，发布时会自动生成'}</small>
             </label>
             <label className="article-field">
               <span>分类</span>

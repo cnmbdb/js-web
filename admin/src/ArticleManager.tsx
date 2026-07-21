@@ -2,14 +2,18 @@ import { type ChangeEvent, lazy, Suspense, useEffect, useMemo, useState } from '
 import {
   CalendarDays,
   Check,
+  Copy,
   Eye,
+  ExternalLink,
   FilePlus2,
   ImagePlus,
   LoaderCircle,
   Save,
   Search,
   Send,
+  Share2,
   Trash2,
+  X,
 } from 'lucide-react'
 
 import {
@@ -24,6 +28,7 @@ import { uploadSiteImage } from './supabase'
 
 const categoryOptions = ['行业观察', '投资人业务', '项目案例', '算力硬件与托管', '绿电园区共建', '企业AIGC应用', '跨境算力出海', '项目进展']
 const ArticlePreview = lazy(() => import('./ArticlePreview'))
+const docsBaseUrl = 'https://suxin-docs.mintlify.site'
 
 function formatDate(value: string) {
   if (!value) return '尚未发布'
@@ -63,6 +68,10 @@ function createArticleSlug(title: string) {
   return asciiSlug
 }
 
+function articlePublicUrl(slug: string) {
+  return `${docsBaseUrl}/blog/${encodeURIComponent(slug)}`
+}
+
 export function ArticleManager({ userEmail }: { userEmail: string }) {
   const [articles, setArticles] = useState<Array<Article>>([])
   const [selectedSlug, setSelectedSlug] = useState('')
@@ -72,8 +81,14 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [isShareOpen, setIsShareOpen] = useState(false)
+  const [isLinkCopied, setIsLinkCopied] = useState(false)
   const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+
+  const shareUrl = draft.status === 'published' && selectedSlug
+    ? articlePublicUrl(selectedSlug)
+    : ''
 
   useEffect(() => {
     let active = true
@@ -133,6 +148,8 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
     setSelectedSlug(article.slug)
     setDraft(article)
     setView('edit')
+    setIsShareOpen(false)
+    setIsLinkCopied(false)
     setMessage('')
     setErrorMessage('')
   }
@@ -141,8 +158,29 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
     setSelectedSlug('')
     setDraft(createEmptyArticle(userEmail))
     setView('edit')
+    setIsShareOpen(false)
+    setIsLinkCopied(false)
     setMessage('正在创建新文章')
     setErrorMessage('')
+  }
+
+  const toggleShare = () => {
+    setIsShareOpen((current) => !current)
+    setIsLinkCopied(false)
+    setErrorMessage('')
+  }
+
+  const copyShareUrl = async () => {
+    if (!shareUrl) return
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setIsLinkCopied(true)
+      setMessage('文章链接已复制。')
+      setErrorMessage('')
+    } catch {
+      setIsLinkCopied(false)
+      setErrorMessage('自动复制失败，请手动选择链接复制。')
+    }
   }
 
   const persist = async (status: ArticleStatus) => {
@@ -177,6 +215,8 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
         setDraft(result.article)
         setSelectedSlug(result.article.slug)
       }
+      setIsShareOpen(false)
+      setIsLinkCopied(false)
       if (result.warning) setErrorMessage(result.warning)
       setMessage(
         status === 'published'
@@ -282,6 +322,17 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
               <button className={view === 'edit' ? 'active' : ''} onClick={() => setView('edit')} type="button"><Save size={14} /> 编辑</button>
               <button className={view === 'preview' ? 'active' : ''} onClick={() => setView('preview')} type="button"><Eye size={14} /> 预览</button>
             </div>
+            {shareUrl ? (
+              <button
+                aria-controls="article-share-panel"
+                aria-expanded={isShareOpen}
+                className={isShareOpen ? 'article-share-trigger active' : 'article-share-trigger'}
+                onClick={toggleShare}
+                type="button"
+              >
+                <Share2 size={15} /> 分享
+              </button>
+            ) : null}
             <button className="ghost-button" disabled={isSaving} onClick={() => void persist('draft')} type="button">
               {isSaving ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />} 保存草稿
             </button>
@@ -290,6 +341,33 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
             </button>
           </div>
         </div>
+
+        {isShareOpen && shareUrl ? (
+          <div className="article-share-panel" id="article-share-panel" role="dialog" aria-label="分享已发布文章">
+            <div className="article-share-copy">
+              <span>PUBLIC ARTICLE LINK</span>
+              <strong>{draft.title}</strong>
+            </div>
+            <div className="article-share-link-row">
+              <input
+                aria-label="文章公开链接"
+                onFocus={(event) => event.currentTarget.select()}
+                readOnly
+                value={shareUrl}
+              />
+              <button className={isLinkCopied ? 'article-copy-button copied' : 'article-copy-button'} onClick={() => void copyShareUrl()} type="button">
+                {isLinkCopied ? <Check size={15} /> : <Copy size={15} />}
+                {isLinkCopied ? '已复制' : '复制链接'}
+              </button>
+              <a className="article-open-link" href={shareUrl} rel="noreferrer" target="_blank">
+                <ExternalLink size={15} /> 打开文章
+              </a>
+            </div>
+            <button className="article-share-close" onClick={() => setIsShareOpen(false)} type="button" aria-label="关闭分享链接">
+              <X size={16} />
+            </button>
+          </div>
+        ) : null}
 
         {message ? <p className="article-message" role="status"><Check size={15} /> {message}</p> : null}
         {errorMessage ? <p className="article-message error" role="alert">{errorMessage}</p> : null}

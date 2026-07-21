@@ -178,42 +178,54 @@ async function readGithubFile(path: string) {
   }
 }
 
-async function writeGithubFile(path: string, content: string, message: string) {
-  const settings = githubSettings()
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const current = await readGithubFile(path)
-    try {
-      return await githubRequest(`/contents/${path}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          message,
-          content: encodeBase64(content),
-          branch: settings.branch,
-          ...(current?.sha ? { sha: current.sha } : {}),
-        }),
-      })
-    } catch (error) {
-      if (!(error instanceof GitHubApiError) || error.status !== 409 || attempt === 3) throw error
-    }
-  }
-  throw new Error('GitHub 文件写入失败')
+type GithubFileChange = {
+  path: string
+  content?: string
+  delete?: boolean
 }
 
-async function deleteGithubFile(path: string, message: string) {
+async function commitGithubFiles(changes: Array<GithubFileChange>, message: string) {
   const settings = githubSettings()
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const current = await readGithubFile(path)
-    if (!current) return
-    try {
-      await githubRequest(`/contents/${path}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ message, sha: current.sha, branch: settings.branch }),
+    const encodedBranch = settings.branch.split('/').map(encodeURIComponent).join('/')
+    const reference = await githubRequest(`/git/ref/heads/${encodedBranch}`)
+    const parentSha = String(reference.object?.sha || '')
+    if (!parentSha) throw new Error('GitHub 分支没有可用的 HEAD 提交')
+    const parentCommit = await githubRequest(`/git/commits/${parentSha}`)
+    const treeEntries = []
+
+    for (const change of changes) {
+      if (change.delete) {
+        treeEntries.push({ path: change.path, mode: '100644', type: 'blob', sha: null })
+        continue
+      }
+      const blob = await githubRequest('/git/blobs', {
+        method: 'POST',
+        body: JSON.stringify({ content: encodeBase64(change.content || ''), encoding: 'base64' }),
       })
-      return
+      treeEntries.push({ path: change.path, mode: '100644', type: 'blob', sha: String(blob.sha) })
+    }
+
+    const tree = await githubRequest('/git/trees', {
+      method: 'POST',
+      body: JSON.stringify({ base_tree: parentCommit.tree?.sha, tree: treeEntries }),
+    })
+    const commit = await githubRequest('/git/commits', {
+      method: 'POST',
+      body: JSON.stringify({ message, tree: tree.sha, parents: [parentSha] }),
+    })
+
+    try {
+      await githubRequest(`/git/refs/heads/${encodedBranch}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ sha: commit.sha, force: false }),
+      })
+      return { commit }
     } catch (error) {
-      if (!(error instanceof GitHubApiError) || error.status !== 409 || attempt === 3) throw error
+      if (!(error instanceof GitHubApiError) || ![409, 422].includes(error.status) || attempt === 3) throw error
     }
   }
+  throw new Error('GitHub 批量提交失败')
 }
 
 function serializeArticle(article: Article) {
@@ -236,25 +248,43 @@ function currentShanghaiDate() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date())
 }
 
-async function syncGithubNavigation(client: ReturnType<typeof createClient>) {
+async function renderGithubNavigation(
+  client: ReturnType<typeof createClient>,
+  options: {
+    removeSlugs?: Array<string>
+    upsert?: { slug: string; published_at: string | null; updated_at: string }
+  } = {},
+) {
   const { data, error } = await client
     .from('article_drafts')
     .select('slug, published_at, updated_at')
     .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .order('updated_at', { ascending: false })
   if (error) throw error
+
+  const removed = new Set(options.removeSlugs || [])
+  const rows = (data || []).filter((row) => !removed.has(row.slug))
+  if (options.upsert) {
+    const existingIndex = rows.findIndex((row) => row.slug === options.upsert?.slug)
+    if (existingIndex >= 0) rows.splice(existingIndex, 1)
+    rows.push(options.upsert)
+  }
+  rows.sort((left, right) => {
+    const rightPublished = Date.parse(right.published_at || right.updated_at || '') || 0
+    const leftPublished = Date.parse(left.published_at || left.updated_at || '') || 0
+    if (rightPublished !== leftPublished) return rightPublished - leftPublished
+    return (Date.parse(right.updated_at || '') || 0) - (Date.parse(left.updated_at || '') || 0)
+  })
 
   const current = await readGithubFile('docs/docs.json')
   if (!current) throw new Error('GitHub 仓库中缺少 docs/docs.json')
   const config = JSON.parse(current.content)
   const pages = config.navigation?.pages
   if (!Array.isArray(pages)) throw new Error('docs.json 缺少 navigation.pages')
-  const blogPages = (data || []).map((row) => `blog/${row.slug}`)
+  const blogPages = rows.map((row) => `blog/${row.slug}`)
   const group = pages.find((item: { group?: string }) => item?.group === '博客文章')
   if (group) group.pages = blogPages
   else pages.push({ group: '博客文章', pages: blogPages })
-  await writeGithubFile('docs/docs.json', `${JSON.stringify(config, null, 2)}\n`, 'Update Mintlify article navigation')
+  return `${JSON.stringify(config, null, 2)}\n`
 }
 
 Deno.serve(async (request) => {
@@ -341,21 +371,39 @@ Deno.serve(async (request) => {
       }
 
       let commitSha: string | null = null
-      if (nextArticle.status === 'published') {
-        stage = 'github-write'
-        const result = await writeGithubFile(
-          `docs/blog/${nextArticle.slug}.mdx`,
-          serializeArticle(nextArticle),
-          `Publish article: ${nextArticle.title}`,
+      if (nextArticle.status === 'published' || previousArticle?.status === 'published') {
+        stage = 'navigation'
+        const updatedAt = new Date().toISOString()
+        const navigationContent = await renderGithubNavigation(client, {
+          removeSlugs: [previousArticleSlug, nextArticle.slug],
+          ...(nextArticle.status === 'published'
+            ? {
+                upsert: {
+                  slug: nextArticle.slug,
+                  published_at: nextArticle.publishedAt || null,
+                  updated_at: updatedAt,
+                },
+              }
+            : {}),
+        })
+        const changes: Array<GithubFileChange> = []
+        if (nextArticle.status === 'published') {
+          changes.push({ path: `docs/blog/${nextArticle.slug}.mdx`, content: serializeArticle(nextArticle) })
+        }
+        if (
+          previousArticle?.status === 'published'
+          && (nextArticle.status !== 'published' || previousArticleSlug !== nextArticle.slug)
+        ) {
+          changes.push({ path: `docs/blog/${previousArticleSlug}.mdx`, delete: true })
+        }
+        changes.push({ path: 'docs/docs.json', content: navigationContent })
+
+        stage = nextArticle.status === 'published' ? 'github-write' : 'github-delete'
+        const result = await commitGithubFiles(
+          changes,
+          `${nextArticle.status === 'published' ? 'Publish' : 'Unpublish'} article: ${nextArticle.title}`,
         )
         commitSha = result.commit?.sha || null
-        if (previousSlug && previousSlug !== nextArticle.slug && slugPattern.test(previousSlug)) {
-          stage = 'github-delete'
-          await deleteGithubFile(`docs/blog/${previousSlug}.mdx`, `Rename article: ${previousSlug} to ${nextArticle.slug}`)
-        }
-      } else if (previousArticle?.status === 'published') {
-        stage = 'github-delete'
-        await deleteGithubFile(`docs/blog/${previousArticleSlug}.mdx`, `Unpublish article: ${previousArticleSlug}`)
       }
 
       stage = 'database'
@@ -381,10 +429,6 @@ Deno.serve(async (request) => {
       if (previousSlug && previousSlug !== nextArticle.slug) {
         await client.from('article_drafts').delete().eq('slug', previousSlug)
       }
-      if (nextArticle.status === 'published' || previousArticle?.status === 'published') {
-        stage = 'navigation'
-        await syncGithubNavigation(client)
-      }
 
       stage = 'response'
       const { data: rows, error: listError } = await client.from('article_drafts').select('*').order('updated_at', { ascending: false })
@@ -401,16 +445,17 @@ Deno.serve(async (request) => {
       const { data: current, error: currentError } = await client.from('article_drafts').select('status').eq('slug', slug).maybeSingle()
       if (currentError) throw currentError
       if (current?.status === 'published') {
+        stage = 'navigation'
+        const navigationContent = await renderGithubNavigation(client, { removeSlugs: [slug] })
         stage = 'github-delete'
-        await deleteGithubFile(`docs/blog/${slug}.mdx`, `Delete article: ${slug}`)
+        await commitGithubFiles([
+          { path: `docs/blog/${slug}.mdx`, delete: true },
+          { path: 'docs/docs.json', content: navigationContent },
+        ], `Delete article: ${slug}`)
       }
       stage = 'database'
       const { error } = await client.from('article_drafts').delete().eq('slug', slug)
       if (error) throw error
-      if (current?.status === 'published') {
-        stage = 'navigation'
-        await syncGithubNavigation(client)
-      }
       stage = 'response'
       const { data: rows, error: listError } = await client.from('article_drafts').select('*').order('updated_at', { ascending: false })
       if (listError) throw listError

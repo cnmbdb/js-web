@@ -177,9 +177,10 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
         setDraft(result.article)
         setSelectedSlug(result.article.slug)
       }
+      if (result.warning) setErrorMessage(result.warning)
       setMessage(
         status === 'published'
-          ? '文章已发布，Mintlify 导航和官网文章索引已同步。'
+          ? '文章已发布，Mintlify 部署已触发。'
           : import.meta.env.DEV
             ? '草稿已保存到本地 MDX。'
             : '草稿已保存到内容数据库。',
@@ -206,6 +207,7 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
       setSelectedSlug(next?.slug || '')
       setDraft(next || createEmptyArticle(userEmail))
       setMessage('文章已删除。')
+      if (result.warning) setErrorMessage(result.warning)
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '删除文章失败')
     } finally {

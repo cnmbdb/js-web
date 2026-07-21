@@ -28,6 +28,7 @@ type ArticleResponse = {
   articles: Array<Article>
   error?: string
   stage?: string
+  warning?: string
 }
 
 const stageLabels: Record<string, string> = {

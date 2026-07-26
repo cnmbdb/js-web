@@ -14,7 +14,7 @@ export type SiteMediaItem = {
   kind: 'image' | 'video'
   createdAt: string
   size: number
-  source: 'github' | 'project' | 'storage'
+  source: 'cloudflare' | 'github' | 'project' | 'storage'
 }
 
 const imageExtensions = /\.(avif|gif|jpe?g|png|webp)$/i
@@ -56,16 +56,16 @@ const projectMediaItems = projectMediaFiles.map<SiteMediaItem>((file) => {
   }
 })
 
-const githubReleaseMediaItems = [
+const cloudflareR2MediaItems = [
   {
-    id: 'github:media-assets/suxin-home-hero-640-20260727.mp4',
-    name: 'suxin-home-hero-640-20260727.mp4',
-    path: 'media-assets/suxin-home-hero-640-20260727.mp4',
-    publicUrl: 'https://github.com/cnmbdb/js-web/releases/download/media-assets/suxin-home-hero-640-20260727.mp4',
+    id: 'cloudflare:suxin-media/suxin-home-hero-original.mp4',
+    name: 'suxin-home-hero-original.mp4',
+    path: 'suxin-media/suxin-home-hero-original.mp4',
+    publicUrl: 'https://pub-435011c4d69841169e97c1ebdcc974f3.r2.dev/suxin-home-hero-original.mp4',
     kind: 'video',
-    createdAt: '2026-07-26T16:24:00Z',
-    size: 14601607,
-    source: 'github',
+    createdAt: '2026-07-26T16:43:52Z',
+    size: 112929914,
+    source: 'cloudflare',
   },
 ] satisfies SiteMediaItem[]
 
@@ -110,7 +110,7 @@ export async function listSiteMedia(kind: 'image' | 'video') {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 
   return [
-    ...githubReleaseMediaItems.filter((item) => item.kind === kind),
+    ...cloudflareR2MediaItems.filter((item) => item.kind === kind),
     ...projectMediaItems.filter((item) => item.kind === kind),
     ...storageItems,
   ]

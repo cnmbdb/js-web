@@ -37,6 +37,7 @@ function formatFileSize(size: number) {
 }
 
 function formatMediaSource(source: SiteMediaItem['source']) {
+  if (source === 'cloudflare') return 'Cloudflare R2 原始视频'
   if (source === 'github') return 'GitHub Release'
   if (source === 'project') return '项目素材'
   return '已上传'

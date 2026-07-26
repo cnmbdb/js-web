@@ -36,6 +36,12 @@ function formatFileSize(size: number) {
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
+function formatMediaSource(source: SiteMediaItem['source']) {
+  if (source === 'github') return 'GitHub Release'
+  if (source === 'project') return '项目素材'
+  return '已上传'
+}
+
 export function MediaPickerField({
   className = '',
   kind,
@@ -236,7 +242,7 @@ export function MediaPickerField({
                         </span>
                         <span className="media-library-meta">
                           <strong title={item.name}>{item.name}</strong>
-                          <small>{item.source === 'project' ? '项目素材' : '已上传'} · {formatFileSize(item.size)}</small>
+                          <small>{formatMediaSource(item.source)} · {formatFileSize(item.size)}</small>
                         </span>
                       </button>
                     ))}
@@ -252,7 +258,7 @@ export function MediaPickerField({
                 <p>
                   {kind === 'image'
                     ? '支持 JPEG、PNG、WebP、GIF、AVIF，最大 10MB'
-                    : '支持 MP4、WebM、MOV、OGG，最大 100MB'}
+                    : '支持 MP4、WebM、MOV、OGG，Supabase 免费版最大 50MB；大视频可从 GitHub Release 素材库选择'}
                 </p>
                 <label className={isUploading ? 'media-local-upload disabled' : 'media-local-upload'} htmlFor={inputId}>
                   {isUploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}

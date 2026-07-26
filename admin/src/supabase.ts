@@ -14,7 +14,7 @@ export type SiteMediaItem = {
   kind: 'image' | 'video'
   createdAt: string
   size: number
-  source: 'project' | 'storage'
+  source: 'github' | 'project' | 'storage'
 }
 
 const imageExtensions = /\.(avif|gif|jpe?g|png|webp)$/i
@@ -55,6 +55,19 @@ const projectMediaItems = projectMediaFiles.map<SiteMediaItem>((file) => {
     source: 'project',
   }
 })
+
+const githubReleaseMediaItems = [
+  {
+    id: 'github:media-assets/suxin-home-hero-20260726.mp4',
+    name: 'suxin-home-hero-20260726.mp4',
+    path: 'media-assets/suxin-home-hero-20260726.mp4',
+    publicUrl: 'https://github.com/cnmbdb/js-web/releases/download/media-assets/suxin-home-hero-20260726.mp4',
+    kind: 'video',
+    createdAt: '2026-07-26T15:35:33Z',
+    size: 112929914,
+    source: 'github',
+  },
+] satisfies SiteMediaItem[]
 
 export async function listSiteMedia(kind: 'image' | 'video') {
   const folders = ['content', 'content/videos']
@@ -97,6 +110,7 @@ export async function listSiteMedia(kind: 'image' | 'video') {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
 
   return [
+    ...githubReleaseMediaItems.filter((item) => item.kind === kind),
     ...projectMediaItems.filter((item) => item.kind === kind),
     ...storageItems,
   ]
@@ -174,8 +188,8 @@ export async function uploadSiteVideo(
     throw new Error('请选择 MP4、WebM、MOV 或 OGG 视频')
   }
 
-  if (file.size > 100 * 1024 * 1024) {
-    throw new Error('视频不能超过 100MB')
+  if (file.size > 50 * 1024 * 1024) {
+    throw new Error('Supabase 免费版单个视频不能超过 50MB；更大视频请使用 GitHub Release 素材')
   }
 
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession()

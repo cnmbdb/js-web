@@ -1,0 +1,2 @@
+-- Historical counterpart to 20260721164015_create_aether_blog_content.sql.
+-- The removed Aether tables are not part of this project.

@@ -1,4 +1,4 @@
-import { type ChangeEvent, lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   CalendarDays,
   Check,
@@ -6,7 +6,6 @@ import {
   Eye,
   ExternalLink,
   FilePlus2,
-  ImagePlus,
   LoaderCircle,
   Save,
   Search,
@@ -24,7 +23,7 @@ import {
   removeArticle,
   saveArticle,
 } from './articles'
-import { uploadSiteImage } from './supabase'
+import { MediaPickerField } from './MediaPickerField'
 
 const categoryOptions = ['行业观察', '投资人业务', '项目案例', '算力硬件与托管', '绿电园区共建', '企业AIGC应用', '跨境算力出海', '项目进展']
 const ArticlePreview = lazy(() => import('./ArticlePreview'))
@@ -80,7 +79,6 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
   const [view, setView] = useState<'edit' | 'preview'>('edit')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [isLinkCopied, setIsLinkCopied] = useState(false)
   const [message, setMessage] = useState('')
@@ -255,22 +253,6 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
     }
   }
 
-  const uploadCover = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setIsUploading(true)
-    setErrorMessage('')
-    try {
-      updateDraft('cover', await uploadSiteImage(file))
-      setMessage('封面已上传，保存文章后生效。')
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '封面上传失败')
-    } finally {
-      event.target.value = ''
-      setIsUploading(false)
-    }
-  }
-
   return (
     <section className="article-studio" aria-label="博客文章管理">
       <aside className="article-library panel">
@@ -414,22 +396,16 @@ export function ArticleManager({ userEmail }: { userEmail: string }) {
               <input checked={draft.featured} onChange={(event) => updateDraft('featured', event.target.checked)} type="checkbox" />
               <span><strong>设为头条文章</strong><small>官网资讯列表优先展示</small></span>
             </label>
-            <div className="article-cover-field span-2">
-              <div className="article-cover-preview">
-                {draft.cover ? <img alt="文章封面预览" src={draft.cover} /> : <ImagePlus size={28} />}
-              </div>
-              <div>
-                <label className="article-field">
-                  <span>封面图片 URL</span>
-                  <input onChange={(event) => updateDraft('cover', event.target.value)} placeholder="https://..." value={draft.cover} />
-                </label>
-                <label className={isUploading ? 'article-upload disabled' : 'article-upload'}>
-                  {isUploading ? <LoaderCircle className="spin" size={15} /> : <ImagePlus size={15} />}
-                  {isUploading ? '上传中' : '从本机上传封面'}
-                  <input accept="image/*" disabled={isUploading} onChange={uploadCover} type="file" />
-                </label>
-              </div>
-            </div>
+            <MediaPickerField
+              className="span-2 article-media-picker"
+              kind="image"
+              label="文章封面"
+              onChange={(cover) => {
+                updateDraft('cover', cover)
+                setMessage('封面已选择，保存文章后生效。')
+              }}
+              value={draft.cover}
+            />
             <label className="article-field article-body-field span-2">
               <span>正文（Markdown / MDX）</span>
               <textarea onChange={(event) => updateDraft('body', event.target.value)} spellCheck={false} value={draft.body} />

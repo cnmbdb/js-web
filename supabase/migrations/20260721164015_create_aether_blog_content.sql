@@ -1,0 +1,3 @@
+-- Historical migration applied remotely and reverted by the next migration.
+-- The two migrations are intentionally retained as no-ops so local and remote
+-- migration version histories remain aligned without restoring removed tables.

@@ -1,4 +1,4 @@
-import { type ChangeEvent, lazy, type ReactNode, Suspense, useEffect, useId, useMemo, useState } from 'react'
+import { lazy, type ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
 import {
   type ColumnDef,
   type SortingState,
@@ -12,7 +12,6 @@ import {
   BookOpen,
   BriefcaseBusiness,
   ChevronDown,
-  FileVideo,
   FileText,
   GalleryVerticalEnd,
   GripVertical,
@@ -28,11 +27,11 @@ import {
   Save,
   Search,
   SquarePen,
-  Upload,
   UsersRound,
 } from 'lucide-react'
 
-import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage, uploadSiteVideo } from './supabase'
+import { MediaPickerField } from './MediaPickerField'
+import { loadPublishedSiteConfig, publishSiteConfig } from './supabase'
 
 const ArticleManager = lazy(() => import('./ArticleManager').then((module) => ({ default: module.ArticleManager })))
 
@@ -2052,153 +2051,6 @@ function objectValue<T extends object>(value: FieldValue, fallback: T): T {
   return isRecordValue(value) ? ({ ...fallback, ...value } as T) : fallback
 }
 
-function resolveMediaPreviewUrl(value: string) {
-  if (!value || /^(https?:|data:|blob:)/i.test(value) || typeof window === 'undefined') return value
-
-  const cleanPath = value.replace(/^\.?\//, '')
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return `https://cnmbdb.github.io/js-web/${cleanPath}`
-  }
-
-  return new URL(`../${cleanPath}`, window.location.href).href
-}
-
-function ImageUploadField({
-  className = '',
-  label,
-  onChange,
-  value,
-}: {
-  className?: string
-  label: string
-  onChange: (value: string) => void
-  value: string
-}) {
-  const inputId = useId()
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
-
-  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    setIsUploading(true)
-    setUploadError('')
-    try {
-      onChange(await uploadSiteImage(file))
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : '上传失败')
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  return (
-    <div className={`image-upload-field ${className}`.trim()}>
-      <span className="image-upload-label">{label}</span>
-      <div className="image-upload-body">
-        <div className="image-preview">
-          {value ? <img alt={`${label}预览`} src={resolveMediaPreviewUrl(value)} /> : <Image aria-hidden="true" size={22} />}
-        </div>
-        <div className="image-upload-controls">
-          <label className={isUploading ? 'image-upload-button disabled' : 'image-upload-button'} htmlFor={inputId}>
-            {isUploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
-            {isUploading ? '上传中' : '选择图片'}
-          </label>
-          <input
-            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-            className="image-file-input"
-            disabled={isUploading}
-            id={inputId}
-            onChange={upload}
-            type="file"
-          />
-          <label className="image-url-field">
-            <span>图片 URL / 项目路径</span>
-            <input
-              onChange={(event) => onChange(event.target.value)}
-              placeholder="上传后自动回填，也可粘贴 https://..."
-              value={value}
-            />
-          </label>
-        </div>
-      </div>
-      {uploadError ? <small className="image-upload-error" role="alert">{uploadError}</small> : null}
-    </div>
-  )
-}
-
-function VideoUploadField({
-  label,
-  onChange,
-  value,
-}: {
-  label: string
-  onChange: (value: string) => void
-  value: string
-}) {
-  const inputId = useId()
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadError, setUploadError] = useState('')
-
-  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-
-    setIsUploading(true)
-    setUploadProgress(0)
-    setUploadError('')
-    try {
-      onChange(await uploadSiteVideo(file, setUploadProgress))
-    } catch (error) {
-      setUploadError(error instanceof Error ? error.message : '视频上传失败')
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
-  return (
-    <div className="image-upload-field video-upload-field">
-      <span className="image-upload-label">{label}</span>
-      <div className="image-upload-body">
-        <div className="image-preview video-preview">
-          {value ? (
-            <video aria-label={`${label}预览`} muted playsInline preload="metadata" src={resolveMediaPreviewUrl(value)} />
-          ) : (
-            <FileVideo aria-hidden="true" size={22} />
-          )}
-        </div>
-        <div className="image-upload-controls">
-          <label className={isUploading ? 'image-upload-button disabled' : 'image-upload-button'} htmlFor={inputId}>
-            {isUploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
-            {isUploading ? `上传中 ${uploadProgress}%` : '选择视频'}
-          </label>
-          <input
-            accept="video/mp4,video/webm,video/quicktime,video/ogg"
-            className="image-file-input"
-            disabled={isUploading}
-            id={inputId}
-            onChange={upload}
-            type="file"
-          />
-          <label className="image-url-field">
-            <span>视频 URL / 项目路径</span>
-            <input
-              onChange={(event) => onChange(event.target.value)}
-              placeholder="上传后自动回填，也可粘贴 https://..."
-              value={value}
-            />
-          </label>
-        </div>
-      </div>
-      {uploadError ? <small className="image-upload-error" role="alert">{uploadError}</small> : null}
-    </div>
-  )
-}
-
 function ConfigField({
   field,
   value,
@@ -2210,8 +2062,9 @@ function ConfigField({
 }) {
   if (field.type === 'image') {
     return (
-      <ImageUploadField
+      <MediaPickerField
         className="span-2"
+        kind="image"
         label={field.label}
         onChange={onChange}
         value={String(value || '')}
@@ -2795,12 +2648,14 @@ function HomeHeroVideoEditor({
           <span>说明文案</span>
           <textarea value={value.subtitle} onChange={(event) => onChange({ ...value, subtitle: event.target.value })} />
         </label>
-        <VideoUploadField
+        <MediaPickerField
+          kind="video"
           label="首页视频"
           onChange={(videoSrc) => onChange({ ...value, videoSrc })}
           value={value.videoSrc}
         />
-        <ImageUploadField
+        <MediaPickerField
+          kind="image"
           label="加载封面"
           onChange={(posterSrc) => onChange({ ...value, posterSrc })}
           value={value.posterSrc}
@@ -2952,7 +2807,8 @@ function HomeMediaCardsEditor({
               <span>区块标题</span>
               <input value={card.title} onChange={(event) => updateCard(card.id, { title: event.target.value })} />
             </label>
-            <ImageUploadField
+            <MediaPickerField
+              kind="image"
               label="卡片图片"
               onChange={(imageSrc) => updateCard(card.id, { imageSrc })}
               value={card.imageSrc}
@@ -3120,7 +2976,8 @@ function AboutIntroEditor({
           <span>简介段落 2</span>
           <textarea value={value.paragraphs[1] ?? ''} onChange={(event) => updateParagraph(1, event.target.value)} />
         </label>
-        <ImageUploadField
+        <MediaPickerField
+          kind="image"
           label="企业简介图片"
           onChange={(imageSrc) => onChange({ ...value, imageSrc })}
           value={value.imageSrc}
@@ -3234,7 +3091,8 @@ function AboutPanelsEditor({
               </label>
             ) : (
               <>
-                <ImageUploadField
+                <MediaPickerField
+                  kind="image"
                   label="卡片图片"
                   onChange={(imageSrc) => updatePanel(panel.id, { imageSrc })}
                   value={panel.imageSrc}
@@ -3795,7 +3653,8 @@ function CaseCardsEditor({
               <span>右上角标</span>
               <input value={item.corner} onChange={(event) => updateItem(item.id, { corner: event.target.value })} />
             </label>
-            <ImageUploadField
+            <MediaPickerField
+              kind="image"
               label="案例图片"
               onChange={(imageSrc) => updateItem(item.id, { imageSrc })}
               value={item.imageSrc}
@@ -3868,7 +3727,8 @@ function NewsLeadEditor({
             onChange={(event) => onChange({ ...value, href: event.target.value })}
           />
         </label>
-        <ImageUploadField
+        <MediaPickerField
+          kind="image"
           label="资讯主图"
           onChange={(imageSrc) => onChange({ ...value, imageSrc })}
           value={value.imageSrc}
@@ -3998,7 +3858,8 @@ function PhotoCardsEditor({
               <span>标题</span>
               <input value={item.title} onChange={(event) => updateItem(item.id, { title: event.target.value })} />
             </label>
-            <ImageUploadField
+            <MediaPickerField
+              kind="image"
               label="图库图片"
               onChange={(imageSrc) => updateItem(item.id, { imageSrc })}
               value={item.imageSrc}

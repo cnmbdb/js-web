@@ -6,6 +6,102 @@ const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
 
 export const supabase = createClient(supabaseUrl, supabasePublishableKey)
 
+export type SiteMediaItem = {
+  id: string
+  name: string
+  path: string
+  publicUrl: string
+  kind: 'image' | 'video'
+  createdAt: string
+  size: number
+  source: 'project' | 'storage'
+}
+
+const imageExtensions = /\.(avif|gif|jpe?g|png|webp)$/i
+const videoExtensions = /\.(mov|mp4|ogg|ogv|webm)$/i
+
+const projectMediaFiles = [
+  { name: '1496.MP4', kind: 'video', size: 26695252 },
+  { name: 'case-1.png', kind: 'image', size: 170862 },
+  { name: 'case-2.png', kind: 'image', size: 164360 },
+  { name: 'case-3.png', kind: 'image', size: 156751 },
+  { name: 'case-4.png', kind: 'image', size: 141424 },
+  { name: 'case-5.png', kind: 'image', size: 167542 },
+  { name: 'case-6.png', kind: 'image', size: 151145 },
+  { name: 'case-7.png', kind: 'image', size: 158608 },
+  { name: 'case-8.png', kind: 'image', size: 167015 },
+  { name: 'certificates.png', kind: 'image', size: 243011 },
+  { name: 'dashboard-panel.png', kind: 'image', size: 226783 },
+  { name: 'factory-aerial.png', kind: 'image', size: 1652984 },
+  { name: 'green-streaks.png', kind: 'image', size: 337400 },
+  { name: 'grid-floor.png', kind: 'image', size: 661724 },
+  { name: 'hero-chip.png', kind: 'image', size: 627353 },
+  { name: 'logo-nav.png', kind: 'image', size: 18602 },
+  { name: 'logo-suxin.png', kind: 'image', size: 19905 },
+  { name: 'server-room.png', kind: 'image', size: 195630 },
+  { name: 'team-portraits.png', kind: 'image', size: 85757 },
+] satisfies Array<{ name: string; kind: 'image' | 'video'; size: number }>
+
+const projectMediaItems = projectMediaFiles.map<SiteMediaItem>((file) => {
+  const path = `assets/materials/${file.name}`
+  return {
+    id: `project:${path}`,
+    name: file.name,
+    path,
+    publicUrl: path,
+    kind: file.kind,
+    createdAt: '',
+    size: file.size,
+    source: 'project',
+  }
+})
+
+export async function listSiteMedia(kind: 'image' | 'video') {
+  const folders = ['content', 'content/videos']
+  const folderResults = await Promise.all(
+    folders.map(async (folder) => {
+      const { data, error } = await supabase.storage
+        .from('site-media')
+        .list(folder, {
+          limit: 1000,
+          sortBy: { column: 'created_at', order: 'desc' },
+        })
+      if (error) throw error
+      return data.map((item) => ({ folder, item }))
+    }),
+  )
+
+  const storageItems = folderResults
+    .flat()
+    .filter(({ item }) => item.id)
+    .map(({ folder, item }): SiteMediaItem | null => {
+      const mimeType = String(item.metadata?.mimetype || '')
+      const isVideo = mimeType.startsWith('video/') || videoExtensions.test(item.name)
+      const isImage = mimeType.startsWith('image/') || imageExtensions.test(item.name)
+      if (!isVideo && !isImage) return null
+
+      const path = `${folder}/${item.name}`
+      const { data } = supabase.storage.from('site-media').getPublicUrl(path)
+      return {
+        id: item.id,
+        name: item.name,
+        path,
+        publicUrl: data.publicUrl,
+        kind: isVideo ? 'video' : 'image',
+        createdAt: item.created_at || item.updated_at || '',
+        size: Number(item.metadata?.size || 0),
+        source: 'storage',
+      }
+    })
+    .filter((item): item is SiteMediaItem => Boolean(item) && item.kind === kind)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+
+  return [
+    ...projectMediaItems.filter((item) => item.kind === kind),
+    ...storageItems,
+  ]
+}
+
 export async function loadPublishedSiteConfig() {
   const { data, error } = await supabase
     .from('site_configs')

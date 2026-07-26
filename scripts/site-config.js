@@ -285,7 +285,45 @@
   }
 
   function loadHeroVideo(video, source) {
-    if (!video || !source || video.dataset.loadedSource === source) return
+    if (!video || !source) return
+
+    const shell = video.closest('.hero-video-shell')
+    const toggle = shell?.querySelector('.hero-video-toggle')
+    const syncToggle = () => {
+      if (!toggle) return
+      const isPlaying = !video.paused && !video.ended
+      const label = isPlaying ? '暂停首页视频' : '播放首页视频'
+      toggle.setAttribute('aria-label', label)
+      toggle.setAttribute('title', isPlaying ? '暂停视频' : '播放视频')
+      const icon = toggle.querySelector('i')
+      if (icon) icon.className = isPlaying ? 'ri-pause-fill' : 'ri-play-fill'
+    }
+    const playVideo = () => video.play().then(syncToggle).catch(syncToggle)
+
+    if (video.dataset.controlsBound !== 'true') {
+      video.dataset.controlsBound = 'true'
+      toggle?.addEventListener('click', () => {
+        if (video.paused || video.ended) {
+          playVideo()
+          return
+        }
+        video.pause()
+      })
+      video.addEventListener('play', syncToggle)
+      video.addEventListener('pause', syncToggle)
+      video.addEventListener('ended', syncToggle)
+      window.addEventListener('focus', () => {
+        if (video.autoplay && video.paused) playVideo()
+      })
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && video.autoplay && video.paused) playVideo()
+      })
+    }
+
+    if (video.dataset.loadedSource === source) {
+      playVideo()
+      return
+    }
 
     const startLoading = () => {
       if (video.dataset.loadedSource === source) return
@@ -293,11 +331,17 @@
       video.muted = true
       video.defaultMuted = true
       video.playsInline = true
-      video.src = source
-      video.load()
-      const playVideo = () => video.play().catch(() => {})
+      video.autoplay = true
+      video.loop = true
+      video.setAttribute('muted', '')
+      video.setAttribute('playsinline', '')
+      if (video.getAttribute('src') !== source) {
+        video.src = source
+        video.load()
+      }
       video.addEventListener('canplay', playVideo, { once: true })
       playVideo()
+      syncToggle()
     }
 
     window.requestAnimationFrame(startLoading)

@@ -12,6 +12,7 @@ import {
   BookOpen,
   BriefcaseBusiness,
   ChevronDown,
+  FileVideo,
   FileText,
   GalleryVerticalEnd,
   GripVertical,
@@ -31,7 +32,7 @@ import {
   UsersRound,
 } from 'lucide-react'
 
-import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage } from './supabase'
+import { loadPublishedSiteConfig, publishSiteConfig, uploadSiteImage, uploadSiteVideo } from './supabase'
 
 const ArticleManager = lazy(() => import('./ArticleManager').then((module) => ({ default: module.ArticleManager })))
 
@@ -2051,7 +2052,7 @@ function objectValue<T extends object>(value: FieldValue, fallback: T): T {
   return isRecordValue(value) ? ({ ...fallback, ...value } as T) : fallback
 }
 
-function resolveImagePreviewUrl(value: string) {
+function resolveMediaPreviewUrl(value: string) {
   if (!value || /^(https?:|data:|blob:)/i.test(value) || typeof window === 'undefined') return value
 
   const cleanPath = value.replace(/^\.?\//, '')
@@ -2098,7 +2099,7 @@ function ImageUploadField({
       <span className="image-upload-label">{label}</span>
       <div className="image-upload-body">
         <div className="image-preview">
-          {value ? <img alt={`${label}预览`} src={resolveImagePreviewUrl(value)} /> : <Image aria-hidden="true" size={22} />}
+          {value ? <img alt={`${label}预览`} src={resolveMediaPreviewUrl(value)} /> : <Image aria-hidden="true" size={22} />}
         </div>
         <div className="image-upload-controls">
           <label className={isUploading ? 'image-upload-button disabled' : 'image-upload-button'} htmlFor={inputId}>
@@ -2115,6 +2116,76 @@ function ImageUploadField({
           />
           <label className="image-url-field">
             <span>图片 URL / 项目路径</span>
+            <input
+              onChange={(event) => onChange(event.target.value)}
+              placeholder="上传后自动回填，也可粘贴 https://..."
+              value={value}
+            />
+          </label>
+        </div>
+      </div>
+      {uploadError ? <small className="image-upload-error" role="alert">{uploadError}</small> : null}
+    </div>
+  )
+}
+
+function VideoUploadField({
+  label,
+  onChange,
+  value,
+}: {
+  label: string
+  onChange: (value: string) => void
+  value: string
+}) {
+  const inputId = useId()
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState('')
+
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    setIsUploading(true)
+    setUploadProgress(0)
+    setUploadError('')
+    try {
+      onChange(await uploadSiteVideo(file, setUploadProgress))
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : '视频上传失败')
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  return (
+    <div className="image-upload-field video-upload-field">
+      <span className="image-upload-label">{label}</span>
+      <div className="image-upload-body">
+        <div className="image-preview video-preview">
+          {value ? (
+            <video aria-label={`${label}预览`} muted playsInline preload="metadata" src={resolveMediaPreviewUrl(value)} />
+          ) : (
+            <FileVideo aria-hidden="true" size={22} />
+          )}
+        </div>
+        <div className="image-upload-controls">
+          <label className={isUploading ? 'image-upload-button disabled' : 'image-upload-button'} htmlFor={inputId}>
+            {isUploading ? <LoaderCircle className="spin" size={16} /> : <Upload size={16} />}
+            {isUploading ? `上传中 ${uploadProgress}%` : '选择视频'}
+          </label>
+          <input
+            accept="video/mp4,video/webm,video/quicktime,video/ogg"
+            className="image-file-input"
+            disabled={isUploading}
+            id={inputId}
+            onChange={upload}
+            type="file"
+          />
+          <label className="image-url-field">
+            <span>视频 URL / 项目路径</span>
             <input
               onChange={(event) => onChange(event.target.value)}
               placeholder="上传后自动回填，也可粘贴 https://..."
@@ -2724,10 +2795,11 @@ function HomeHeroVideoEditor({
           <span>说明文案</span>
           <textarea value={value.subtitle} onChange={(event) => onChange({ ...value, subtitle: event.target.value })} />
         </label>
-        <label className="menu-cell">
-          <span>视频路径</span>
-          <input value={value.videoSrc} onChange={(event) => onChange({ ...value, videoSrc: event.target.value })} />
-        </label>
+        <VideoUploadField
+          label="首页视频"
+          onChange={(videoSrc) => onChange({ ...value, videoSrc })}
+          value={value.videoSrc}
+        />
         <ImageUploadField
           label="加载封面"
           onChange={(posterSrc) => onChange({ ...value, posterSrc })}

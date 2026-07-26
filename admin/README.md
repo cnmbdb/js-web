@@ -64,7 +64,7 @@ On the first visit, choose `首次使用？创建管理员`, register with an em
 
 Content edits stay in the current admin draft until `保存并发布` is pressed. Published configuration is read by every static frontend page directly from Supabase, so content changes do not require another GitHub Pages deployment.
 
-Image controls upload JPEG, PNG, WebP, GIF, or AVIF files up to 10MB to the public `site-media` bucket. Only the site administrator can upload, update, or delete objects. The returned public URL is placed into the draft automatically and becomes visible to visitors after publishing.
+Image controls upload JPEG, PNG, WebP, GIF, or AVIF files up to 10MB to the public `site-media` bucket. The home hero video control uses resumable uploads for MP4, WebM, MOV, or OGG files up to 100MB. Only the site administrator can upload, update, or delete objects. The returned public URL is placed into the draft automatically and becomes visible to visitors after publishing.
 
 Database and Storage policies are versioned in `../supabase/migrations`.
 

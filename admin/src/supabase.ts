@@ -58,13 +58,13 @@ const projectMediaItems = projectMediaFiles.map<SiteMediaItem>((file) => {
 
 const githubReleaseMediaItems = [
   {
-    id: 'github:media-assets/suxin-home-hero-960x540-20260727.mp4',
-    name: 'suxin-home-hero-960x540-20260727.mp4',
-    path: 'media-assets/suxin-home-hero-960x540-20260727.mp4',
-    publicUrl: 'https://github.com/cnmbdb/js-web/releases/download/media-assets/suxin-home-hero-960x540-20260727.mp4',
+    id: 'github:media-assets/suxin-home-hero-640-20260727.mp4',
+    name: 'suxin-home-hero-640-20260727.mp4',
+    path: 'media-assets/suxin-home-hero-640-20260727.mp4',
+    publicUrl: 'https://github.com/cnmbdb/js-web/releases/download/media-assets/suxin-home-hero-640-20260727.mp4',
     kind: 'video',
-    createdAt: '2026-07-26T16:12:19Z',
-    size: 27614189,
+    createdAt: '2026-07-26T16:24:00Z',
+    size: 14601607,
     source: 'github',
   },
 ] satisfies SiteMediaItem[]

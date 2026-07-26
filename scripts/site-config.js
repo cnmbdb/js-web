@@ -287,31 +287,10 @@
   function loadHeroVideo(video, source) {
     if (!video || !source) return
 
-    const shell = video.closest('.hero-video-shell')
-    const toggle = shell?.querySelector('.hero-video-toggle')
-    const syncToggle = () => {
-      if (!toggle) return
-      const isPlaying = !video.paused && !video.ended
-      const label = isPlaying ? '暂停首页视频' : '播放首页视频'
-      toggle.setAttribute('aria-label', label)
-      toggle.setAttribute('title', isPlaying ? '暂停视频' : '播放视频')
-      const icon = toggle.querySelector('i')
-      if (icon) icon.className = isPlaying ? 'ri-pause-fill' : 'ri-play-fill'
-    }
-    const playVideo = () => video.play().then(syncToggle).catch(syncToggle)
+    const playVideo = () => video.play().catch(() => {})
 
-    if (video.dataset.controlsBound !== 'true') {
-      video.dataset.controlsBound = 'true'
-      toggle?.addEventListener('click', () => {
-        if (video.paused || video.ended) {
-          playVideo()
-          return
-        }
-        video.pause()
-      })
-      video.addEventListener('play', syncToggle)
-      video.addEventListener('pause', syncToggle)
-      video.addEventListener('ended', syncToggle)
+    if (video.dataset.autoplayBound !== 'true') {
+      video.dataset.autoplayBound = 'true'
       window.addEventListener('focus', () => {
         if (video.autoplay && video.paused) playVideo()
       })
@@ -341,7 +320,6 @@
       }
       video.addEventListener('canplay', playVideo, { once: true })
       playVideo()
-      syncToggle()
     }
 
     window.requestAnimationFrame(startLoading)
